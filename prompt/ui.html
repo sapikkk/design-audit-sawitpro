@@ -11,6 +11,7 @@
   button { padding: 7px 10px; border: none; border-radius: 6px; background: #18A0FB; color: #fff; cursor: pointer; margin: 6px 4px 0 0; }
   button.sec { background: #eee; color: #222; }
   button.warn { background: #E53935; }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
   .panel { display: none; margin-top: 10px; }
   .panel.on { display: block; }
   .card { padding: 8px; border: 1px solid #eee; border-radius: 8px; margin-top: 8px; }
@@ -27,29 +28,23 @@
 </style>
 </head>
 <body>
-<h2>DS Audit Pro</h2>
+<h2>DESIGN AUDIT SAWITPRO</h2>
 
 <label>Mode</label>
 <select id="mode">
   <option value="audit">AUDIT FILE</option>
   <option value="apply">APPLY &amp; ANNOTATE</option>
-  <option value="snapshot">SNAPSHOT TOKEN (opsional)</option>
 </select>
 
-<!-- PANEL AUDIT -->
 <div class="panel on" id="p-audit">
-  <label>Nama sprint</label>
-  <input id="sprint" placeholder="Sprint 14">
-  <label>Penanggung jawab</label>
+  <p class="muted" id="fileContext">Konteks file: (baca otomatis dari nama file Figma)</p>
+  <p class="muted" id="rulesHint">Aturan audit: dimuat dari plugin (rules.json repo).</p>
+  <label>Penanggung jawab (opsional)</label>
   <input id="owner" placeholder="Nama desainer">
-  <label>rules.json (bobot dan ambang, opsional; tanpa ini pakai default)</label>
-  <input type="file" id="rulesFile" accept=".json">
   <label><input type="checkbox" id="scanAll"> Scan semua halaman</label>
   <button id="runBtn">Jalankan audit</button>
   <div id="progress" class="muted"></div>
-
   <div id="summary"></div>
-
   <div class="filters">
     <select id="fCat">
       <option value="">Semua kategori</option>
@@ -62,86 +57,43 @@
     </select>
   </div>
   <div id="list"></div>
-  <button class="sec" id="exportBtn">Ekspor JSON</button>
 </div>
 
-<!-- PANEL APPLY -->
 <div class="panel" id="p-apply">
-  <p class="muted">Hanya pelanggaran dengan status EXACT yang bisa diterapkan. Jalankan audit dulu, lalu centang baris di panel Audit.</p>
+  <p class="muted">Hanya pelanggaran EXACT. Jalankan audit dulu, centang baris di panel Audit.</p>
   <button id="applySel">Terapkan terpilih</button>
   <button class="warn" id="applyAll">Terapkan semua EXACT</button>
+  <button class="sec" id="undoBtn" disabled>Pulihkan perubahan terakhir</button>
   <button class="sec" id="annotateBtn">Buat anotasi</button>
   <button class="sec" id="clearBtn">Hapus anotasi</button>
-  <div class="card">
-    <label>Pulihkan dari file undo (.json)</label>
-    <input type="file" id="undoFile" accept=".json">
-    <button class="sec" id="undoBtn">Pulihkan</button>
-  </div>
-</div>
-
-<!-- PANEL SNAPSHOT -->
-<div class="panel" id="p-snapshot">
-  <p class="muted">Hanya untuk dokumentasi. Mengunduh daftar token yang ditemukan plugin di file ini. Tidak dipakai saat audit.</p>
-  <button id="snapshotBtn">Unduh snapshot token</button>
 </div>
 
 <div id="notice"></div>
 
 <script>
   const $ = (id) => document.getElementById(id);
-  let rules = null, audit = null;
+  let audit = null;
+  let lastUndoLog = null;
 
   function post(msg) { parent.postMessage({ pluginMessage: msg }, '*'); }
   function notice(text) { $('notice').textContent = text; }
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   }
-  function download(name, obj) {
-    const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-  function readJSON(file) {
-    return new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => { try { resolve(JSON.parse(r.result)); } catch (e) { reject(e); } };
-      r.onerror = () => reject(r.error);
-      r.readAsText(file);
-    });
+  function setUndoAvailable(on) {
+    $('undoBtn').disabled = !on;
   }
 
   $('mode').onchange = () => {
-    for (const m of ['audit', 'apply', 'snapshot']) {
-      $('p-' + m).classList.toggle('on', $('mode').value === m);
-    }
-  };
-
-  $('rulesFile').onchange = async (e) => {
-    if (e.target.files[0]) { rules = await readJSON(e.target.files[0]); notice('rules.json dimuat.'); }
+    $('p-audit').classList.toggle('on', $('mode').value === 'audit');
+    $('p-apply').classList.toggle('on', $('mode').value === 'apply');
   };
 
   $('runBtn').onclick = () => {
     notice('');
     post({
       type: 'audit',
-      rules: rules || {
-        weights: { AUTO_LAYOUT: 20, TYPOGRAPHY: 20, COLOR: 20, SPACING: 15, COMPONENT: 20, NAMING: 5 },
-        thresholds: { excellent: 90, warning: 75 },
-        nearMatchDeltaE: 2.0,
-        namingPatterns: {
-          screen: '^Screen\\/[A-Za-z0-9-]+$',
-          component: '^(Card|Button|Navbar|Input|Modal)\\/[A-Za-z0-9-]+$',
-          text: '^Text\\/(Header|Body|Caption|Label)$'
-        }
-      },
       scope: $('scanAll').checked ? 'all' : 'page',
-      sprint: $('sprint').value.trim(),
       owner: $('owner').value.trim()
     });
   };
@@ -155,6 +107,7 @@
       <div class="card">
         <div class="score">${audit.score.toFixed(1)}%</div>
         <div>${esc(audit.status)} · ${esc(audit.fileName)}</div>
+        <div class="muted">${esc(audit.fileCategoryLabel || audit.fileCategory || '')}${audit.fileKey ? ' · ' + esc(audit.fileKey) : ''}</div>
         <div class="muted">Node: ${audit.nodeCount} · Tersembunyi dilewati: ${audit.hiddenSkipped} · Instance tak terselesaikan: ${audit.unresolvedInstances}</div>
         <div>HIGH ${counts.HIGH} · MEDIUM ${counts.MEDIUM} · LOW ${counts.LOW} · EXACT bisa diterapkan: ${exact}</div>
       </div>`;
@@ -188,12 +141,6 @@
   $('fCat').onchange = () => audit && renderList();
   $('fSev').onchange = () => audit && renderList();
 
-  $('exportBtn').onclick = () => {
-    if (!audit) { notice('Jalankan audit dulu.'); return; }
-    const safe = (audit.fileName || 'file').replace(/[^a-z0-9-_]+/gi, '_');
-    download(`audit-${safe}.json`, audit);
-  };
-
   $('applySel').onclick = () => {
     if (!audit) { notice('Jalankan audit dulu.'); return; }
     const items = [...document.querySelectorAll('#list input[type=checkbox]:checked')]
@@ -206,8 +153,15 @@
     if (!audit) { notice('Jalankan audit dulu.'); return; }
     const items = audit.violations.filter((v) => v.matchType === 'EXACT');
     if (items.length === 0) { notice('Tidak ada pelanggaran EXACT.'); return; }
-    if (!confirm(`Terapkan ${items.length} perubahan EXACT? Simpan file undo setelahnya.`)) return;
+    if (!confirm(`Terapkan ${items.length} perubahan EXACT? Anda bisa pulihkan dari plugin.`)) return;
     post({ type: 'apply', items });
+  };
+
+  $('undoBtn').onclick = () => {
+    if (!lastUndoLog) { notice('Belum ada perubahan yang bisa dipulihkan.'); return; }
+    post({ type: 'undo', log: lastUndoLog });
+    lastUndoLog = null;
+    setUndoAvailable(false);
   };
 
   $('annotateBtn').onclick = () => {
@@ -216,29 +170,24 @@
   };
   $('clearBtn').onclick = () => post({ type: 'clear-annotations' });
 
-  $('undoBtn').onclick = async () => {
-    const f = $('undoFile').files[0];
-    if (!f) { notice('Pilih file undo dulu.'); return; }
-    post({ type: 'undo', log: await readJSON(f) });
-  };
-
-  $('snapshotBtn').onclick = () => post({ type: 'snapshot' });
-
   window.onmessage = (ev) => {
     const m = ev.data && ev.data.pluginMessage;
     if (!m) return;
-    if (m.type === 'progress') {
+    if (m.type === 'file-context') {
+      $('fileContext').textContent =
+        `Konteks: ${m.fileCategoryLabel} · ${m.fileName}` + (m.fileKey ? ` · ${m.fileKey}` : '');
+    } else if (m.type === 'progress') {
       $('progress').textContent = `Memindai... ${m.done} node`;
     } else if (m.type === 'audit-result') {
       audit = m.data;
       $('progress').textContent = '';
       renderAudit();
-      notice('Audit selesai.');
-    } else if (m.type === 'snapshot-result') {
-      download(`token-snapshot-${Date.now()}.json`, m.data);
+      notice('Audit selesai. Hasil hanya di panel ini.');
     } else if (m.type === 'apply-result') {
-      notice(`Diterapkan ${m.applied}, dilewati ${m.skipped}. File undo diunduh.`);
-      download(`undo-${Date.now()}.json`, m.undo);
+      lastUndoLog = m.undo && (m.undo.changes || []).length ? m.undo : null;
+      setUndoAvailable(!!lastUndoLog);
+      notice(`Diterapkan ${m.applied}, dilewati ${m.skipped}.` +
+        (lastUndoLog ? ' Pulihkan tersedia di panel Apply.' : ''));
     } else if (m.type === 'notice') {
       notice(m.text);
     }

@@ -2,17 +2,12 @@
   "name": "DESIGN AUDIT SAWITPRO",
   "id": "1696532958279147641",
   "api": "1.0.0",
-  "main": "code.js",
-  "capabilities": [],
-  "enableProposedApi": false,
+  "main": "prompt/code.js",
+  "ui": "prompt/ui.html",
+  "editorType": ["figma"],
   "documentAccess": "dynamic-page",
-  "editorType": [
-    "figma",
-    "figjam"
-  ],
+  "permissions": ["teamlibrary"],
   "networkAccess": {
-    "allowedDomains": [
-      "none"
-    ]
+    "allowedDomains": ["none"]
   }
 }

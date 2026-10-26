@@ -1,7 +1,7 @@
 // DS Audit Pro — code.js (v2)
 // Berjalan di sandbox Figma. Tidak ada LLM, tidak ada network, tidak ada token di config.
 // Semua token dan komponen ditemukan dari file aktif dan library yang di-enable.
-// Mode: audit, snapshot, apply, undo, annotate, clear-annotations, select.
+// Mode: audit, apply, undo (in-memory), annotate, clear-annotations, select.
 
 figma.showUI(__html__, { width: 480, height: 680, themeColors: true });
 
@@ -26,6 +26,62 @@ const ANNOTATION_STYLE = {
 const sleep = () => new Promise((r) => setTimeout(r, 0));
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const trunc = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
+
+/** Klasifikasi file Figma SawitPro (bukan hanya sprint). */
+function inferFileCategory(fileName) {
+  const n = (fileName || '').toLowerCase();
+  if (/species/.test(n) && /master/.test(n)) return 'SPECIES_MASTER';
+  if (/design.system|design-system|\bds\b|foundation|token|component.library|lime/.test(n)) {
+    return 'DESIGN_SYSTEM';
+  }
+  if (/sprint/.test(n)) return 'SPRINT';
+  if (/tenera|timpro|agenpro|supirpro|sapik|plantation|affiliate|species/.test(n)) {
+    return 'PRODUCT';
+  }
+  if (/platform|intern|hub|dashboard/.test(n)) return 'PLATFORM';
+  return 'OTHER';
+}
+
+const FILE_CATEGORY_LABEL = {
+  SPECIES_MASTER: 'Species Master',
+  DESIGN_SYSTEM: 'Design System',
+  SPRINT: 'File sprint',
+  PRODUCT: 'Produk / tim',
+  PLATFORM: 'Platform internal',
+  OTHER: 'Lainnya'
+};
+
+/** Aturan audit (sumber: rules.json di repo — disematkan, tanpa upload file). */
+const AUDIT_RULES = {
+  weights: {
+    AUTO_LAYOUT: 20,
+    TYPOGRAPHY: 20,
+    COLOR: 20,
+    SPACING: 15,
+    COMPONENT: 20,
+    NAMING: 5
+  },
+  thresholds: { excellent: 90, warning: 75 },
+  nearMatchDeltaE: 2.0,
+  namingPatterns: {
+    screen: '^Screen\\/[A-Za-z0-9-]+$',
+    component: '^(Card|Button|Navbar|Input|Modal)\\/[A-Za-z0-9-]+$',
+    text: '^Text\\/(Header|Body|Caption|Label)$',
+    icon: '^Icon\\/[A-Za-z0-9-]+$',
+    surface: '^Surface\\/[A-Za-z0-9-]+$'
+  }
+};
+
+(function sendFileContext() {
+  const cat = inferFileCategory(figma.root.name);
+  figma.ui.postMessage({
+    type: 'file-context',
+    fileName: figma.root.name,
+    fileKey: figma.fileKey || '',
+    fileCategory: cat,
+    fileCategoryLabel: FILE_CATEGORY_LABEL[cat] || cat
+  });
+})();
 
 // ---------- Warna ----------
 
@@ -479,7 +535,7 @@ function statusOf(score, th) {
 // ---------- Mode: audit ----------
 
 async function runAudit(msg) {
-  const rules = msg.rules;
+  const rules = AUDIT_RULES;
   const reg = await buildRegistry();
 
   let pages;
@@ -501,11 +557,14 @@ async function runAudit(msg) {
   }
 
   const score = computeScore(cats, rules.weights);
+  const fileName = figma.root.name;
+  const fileCategory = inferFileCategory(fileName);
   const data = {
-    schemaVersion: '1.0',
-    fileName: figma.root.name,
+    schemaVersion: '1.1',
+    fileName,
     fileKey: figma.fileKey || null,
-    sprint: msg.sprint || '',
+    fileCategory,
+    fileCategoryLabel: FILE_CATEGORY_LABEL[fileCategory] || fileCategory,
     owner: msg.owner || '',
     auditedAt: new Date().toISOString(),
     pagesScanned: ctx.pageNames,
@@ -526,14 +585,6 @@ async function runAudit(msg) {
     violations: ctx.violations
   };
   figma.ui.postMessage({ type: 'audit-result', data });
-}
-
-// ---------- Mode: snapshot (opsional, untuk dokumentasi token) ----------
-
-async function snapshot() {
-  const reg = await buildRegistry();
-  figma.ui.postMessage({ type: 'snapshot-result', data: reg });
-  figma.ui.postMessage({ type: 'notice', text: `Snapshot: ${reg.colorVariables.length} warna, ${reg.spacingVariables.length} spacing, ${reg.radiusVariables.length} radius, ${reg.textStyles.length} text style.` });
 }
 
 // ---------- Mode: apply (hanya EXACT) ----------
@@ -712,7 +763,6 @@ async function selectNode(id) {
 figma.ui.onmessage = async (msg) => {
   try {
     if (msg.type === 'audit') await runAudit(msg);
-    else if (msg.type === 'snapshot') await snapshot();
     else if (msg.type === 'apply') await applyChanges(msg.items || []);
     else if (msg.type === 'undo') await undoChanges(msg.log || {});
     else if (msg.type === 'annotate') await annotate(msg.violations || []);
