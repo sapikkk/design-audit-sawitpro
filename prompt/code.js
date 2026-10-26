@@ -816,8 +816,10 @@ function variableUsageSummary(reg, usedVariableIds) {
 }
 
 async function runAudit(msg) {
+  figma.ui.postMessage({ type: 'progress', done: 0, phase: 'registry' });
   const rules = AUDIT_RULES;
   const reg = await buildRegistry();
+  figma.ui.postMessage({ type: 'progress', done: 0, phase: 'scan' });
 
   const cats = {};
   for (const c of CATEGORIES) cats[c] = { total: 0, passed: 0 };

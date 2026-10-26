@@ -348,11 +348,11 @@
 
     <div class="scroll">
       <div id="emptyHint" class="card empty-hint">
-        <strong>Langkah pertama</strong>
+        <strong>Belum ada hasil audit</strong>
+        <p style="margin:6px 0 0">Ini normal — bukan error. Tekan tombol hijau <b>Jalankan audit</b> di atas; skor dan daftar temuan akan menggantikan kotak ini.</p>
         <ol>
-          <li>Pastikan <b>Assets → Libraries</b> — library DS (3.0 Color) aktif.</li>
-          <li>Pilih cakupan: <b>Halaman</b> (umum) atau <b>Seleksi</b> (layer harus dipilih).</li>
-          <li>Klik <b>Jalankan audit</b> — skor & daftar temuan muncul di sini.</li>
+          <li><b>Assets → Libraries</b> — DS 3.0 Color aktif (chip abu “DS 3.0 Color” = tema UI sudah OK).</li>
+          <li>Cakupan <b>Halaman</b> = semua frame di halaman aktif; <b>Seleksi</b> = layer yang dipilih di kanvas.</li>
         </ol>
         <span id="libraryWarn" class="warn-chip" style="display:none"></span>
       </div>
@@ -520,6 +520,8 @@
 
   $('runBtn').onclick = () => {
     notice('');
+    $('progress').textContent = 'Memulai audit…';
+    $('runBtn').disabled = true;
     post({ type: 'audit', scope: auditScope, owner: $('owner').value.trim() });
   };
 
@@ -704,9 +706,12 @@
     } else if (m.type === 'file-context') {
       $('fileContext').textContent = `${m.fileCategoryLabel} · ${m.fileName}`;
     } else if (m.type === 'progress') {
-      $('progress').textContent = `Memindai… ${m.done} node`;
+      $('progress').textContent = m.done > 0
+        ? `Memindai… ${m.done} node`
+        : (m.phase === 'registry' ? 'Memuat token dari library…' : 'Memindai layer…');
     } else if (m.type === 'audit-result') {
       audit = m.data;
+      $('runBtn').disabled = false;
       $('progress').textContent = '';
       renderAudit();
       notice('Audit selesai.');
@@ -715,7 +720,11 @@
       setUndoAvailable(!!lastUndoLog);
       notice(`Diterapkan ${m.applied}, dilewati ${m.skipped}.`);
     } else if (m.type === 'variable-catalog') fillCatalogSelects(m.catalog);
-    else if (m.type === 'notice') notice(m.text);
+    else if (m.type === 'notice') {
+      $('runBtn').disabled = false;
+      if (m.text && m.text.includes('Pilih minimal')) $('progress').textContent = '';
+      notice(m.text);
+    }
   };
 </script>
 </body>
