@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "2.0",
+  "_catatan": "Tidak ada data token di sini. Token ditemukan otomatis dari file dan library yang di-enable.",
+  "weights": {
+    "AUTO_LAYOUT": 20,
+    "TYPOGRAPHY": 20,
+    "COLOR": 20,
+    "SPACING": 15,
+    "COMPONENT": 20,
+    "NAMING": 5
+  },
+  "thresholds": { "excellent": 90, "warning": 75 },
+  "nearMatchDeltaE": 2.0,
+  "namingPatterns": {
+    "screen": "^Screen\\/[A-Za-z0-9-]+$",
+    "component": "^(Card|Button|Navbar|Input|Modal)\\/[A-Za-z0-9-]+$",
+    "text": "^Text\\/(Header|Body|Caption|Label)$",
+    "icon": "^Icon\\/[A-Za-z0-9-]+$",
+    "surface": "^Surface\\/[A-Za-z0-9-]+$"
+  }
+}

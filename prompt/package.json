@@ -1,0 +1,10 @@
+{
+  "name": "design-audit-sawitpro-plugin",
+  "version": "2.0.0",
+  "private": true,
+  "description": "DESIGN AUDIT SAWITPRO — plugin Figma audit Design System + agregat tanpa LLM",
+  "scripts": {
+    "aggregate": "node aggregate.js"
+  },
+  "license": "UNLICENSED"
+}

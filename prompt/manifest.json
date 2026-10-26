@@ -1,0 +1,10 @@
+{
+  "name": "DESIGN AUDIT SAWITPRO",
+  "id": "ISI_ID_DARI_FIGMA_SAAT_PLUGIN_DIBUAT",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "permissions": ["teamlibrary"]
+}

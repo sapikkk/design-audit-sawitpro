@@ -1,0 +1,14 @@
+# Node
+*.log
+*.log.*
+node_modules
+
+out/
+dist/
+code.js
+
+# Hasil audit (generate lokal)
+exports/
+reports/
+*.env
+.env.*
