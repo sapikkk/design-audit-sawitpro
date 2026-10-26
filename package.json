@@ -1,6 +1,6 @@
 {
   "name": "design-audit-sawitpro",
-  "version": "2.2.6",
+  "version": "2.2.7",
   "description": "DESIGN AUDIT SAWITPRO — plugin Figma audit Design System + agregat laporan",
   "main": "prompt/code.js",
   "scripts": {
@@ -9,6 +9,8 @@
     "figma:bundle": "bash scripts/figma-bundle-dev.sh",
     "figma:open-manifest": "open -R figma-dev/manifest.json",
     "figma:setup": "npm run figma:bundle && npm run figma:fix-import && npm run figma:open-manifest",
+    "skills:verify": "bash scripts/skills-verify.sh",
+    "skills:optional": "bash scripts/skills-optional-clone.sh",
     "build": "tsc -p tsconfig.json",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

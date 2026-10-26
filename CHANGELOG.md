@@ -2,6 +2,17 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## [2.2.7] — 2026-10-27
+
+### Added
+
+- Skills proyek: `design-audit-sawitpro`, `figma-ecosystem-index` (+ `reference.md` tautan GitHub), `anti-slop-edits`; rule `no-ai-slop.mdc`.
+- `npm run skills:verify` / `skills:optional` (clone referensi opsional di luar repo).
+
+### Changed
+
+- UI plugin: density figma-plugin-ds (32px tombol, 11px type), hover/focus-visible, header tanpa ALL CAPS, `aria-selected` tab.
+
 ## [2.2.6] — 2026-10-26
 
 ### Fixed

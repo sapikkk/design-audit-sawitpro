@@ -6,6 +6,10 @@
 <style>
   /* shadcn-inspired tokens + SawitPRO DS overrides via applyTheme() */
   :root {
+    /* Density aligned with figma-plugin-ds (11px base, 32px controls) */
+    --font-size-xsmall: 11px;
+    --font-size-small: 12px;
+    --size-medium: 32px;
     --background: #E5F3E6;
     --foreground: #1F1F1F;
     --card: #FFFFFF;
@@ -34,7 +38,7 @@
   html, body { height: 100%; }
   body {
     margin: 0;
-    font: 12px/1.5 ui-sans-serif, Inter, system-ui, sans-serif;
+    font: var(--font-size-small)/1.45 ui-sans-serif, Inter, "SF Pro Text", system-ui, sans-serif;
     color: var(--foreground);
     background: var(--background);
     display: flex;
@@ -47,14 +51,14 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 12px;
+    min-height: var(--size-medium);
+    padding: 0 12px;
     background: var(--header);
     color: var(--primary-foreground);
-    border-bottom: 3px solid var(--brand-secondary);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    border-bottom: 2px solid var(--brand-secondary);
+    font-size: var(--font-size-xsmall);
+    font-weight: 600;
+    letter-spacing: 0.01em;
   }
   .native-bridge img {
     width: 20px;
@@ -88,11 +92,16 @@
     background: transparent;
     color: var(--muted-foreground);
     font: inherit;
-    font-size: 11px;
+    font-size: var(--font-size-xsmall);
     font-weight: 600;
-    padding: 6px 8px;
+    min-height: 28px;
+    padding: 4px 8px;
     border-radius: var(--radius);
     cursor: pointer;
+  }
+  .tabs button:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--ring) 55%, transparent);
+    outline-offset: 1px;
   }
   .tabs button[data-active="true"] {
     background: var(--card);
@@ -141,16 +150,24 @@
     background: var(--card);
     color: var(--foreground);
     font: inherit;
-    font-size: 10px;
+    font-size: var(--font-size-xsmall);
     font-weight: 600;
-    padding: 6px 8px;
+    min-height: 28px;
+    padding: 4px 8px;
     border-radius: var(--radius);
     cursor: pointer;
+  }
+  .segmented button:hover:not([data-active="true"]) {
+    background: color-mix(in srgb, var(--muted) 70%, var(--card));
   }
   .segmented button[data-active="true"] {
     border-color: var(--primary);
     background: color-mix(in srgb, var(--primary) 12%, var(--card));
     color: var(--secondary-foreground);
+  }
+  .segmented button:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--ring) 45%, transparent);
+    outline-offset: 1px;
   }
 
   input[type=text], select {
@@ -174,15 +191,23 @@
     gap: 6px;
     border: none;
     border-radius: var(--radius);
-    padding: 8px 12px;
+    min-height: var(--size-medium);
+    padding: 0 12px;
     font: inherit;
-    font-size: 11px;
+    font-size: var(--font-size-xsmall);
     font-weight: 600;
     cursor: pointer;
   }
+  .btn:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--ring) 50%, transparent);
+    outline-offset: 2px;
+  }
   .btn-primary { background: var(--primary); color: var(--primary-foreground); }
-  .btn-primary:hover { background: var(--btn-hover); }
+  .btn-primary:hover:not(:disabled) { background: var(--btn-hover); }
   .btn-secondary { background: var(--card); color: var(--foreground); border: 1px solid var(--border); }
+  .btn-secondary:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--muted) 65%, var(--card));
+  }
   .btn-destructive { background: var(--destructive); color: #fff; }
   .btn-ghost { background: transparent; color: var(--muted-foreground); border: 1px solid transparent; padding: 4px 8px; font-size: 10px; }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -196,6 +221,8 @@
     min-height: 0;
     overflow: auto;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--border) 80%, transparent) transparent;
   }
 
   .card {
@@ -313,17 +340,17 @@
 </head>
 <body>
 
-<div class="native-bridge" aria-hidden="true">
+<header class="native-bridge">
   <img src="brand-icon.png" alt="" width="20" height="20" />
   <span>Design Audit SawitPRO</span>
-  <span id="pluginVer" style="margin-left:auto;opacity:.85;font-weight:600;letter-spacing:0">v2.2.6</span>
-</div>
+  <span id="pluginVer" style="margin-left:auto;opacity:.9;font-weight:600">v2.2.7</span>
+</header>
 
 <div class="app">
   <div class="tabs" role="tablist">
-    <button type="button" id="tab-audit" data-active="true" role="tab">Audit</button>
-    <button type="button" id="tab-apply" data-active="false" role="tab">Apply</button>
-    <button type="button" id="tab-tools" data-active="false" role="tab">Tools</button>
+    <button type="button" id="tab-audit" data-active="true" role="tab" aria-selected="true">Audit</button>
+    <button type="button" id="tab-apply" data-active="false" role="tab" aria-selected="false">Apply</button>
+    <button type="button" id="tab-tools" data-active="false" role="tab" aria-selected="false">Tools</button>
   </div>
 
   <div class="toolbar">
@@ -479,8 +506,11 @@
 
   function setTab(mode) {
     ['audit', 'apply', 'tools'].forEach((m) => {
-      $('tab-' + m).dataset.active = mode === m ? 'true' : 'false';
-      $('p-' + m).classList.toggle('on', mode === m);
+      const on = mode === m;
+      const tab = $('tab-' + m);
+      tab.dataset.active = on ? 'true' : 'false';
+      tab.setAttribute('aria-selected', on ? 'true' : 'false');
+      $('p-' + m).classList.toggle('on', on);
     });
     if (mode === 'tools' && variableCatalog.length === 0) post({ type: 'load-variable-catalog' });
   }

@@ -1,0 +1,13 @@
+---
+description: Keep plugin docs, UI strings, and agent replies concise and specific to SawitPRO audit plugin.
+globs: prompt/**/*,docs/**/*,CHANGELOG.md,AGENTS.md
+alwaysApply: false
+---
+
+# No AI slop (this repo)
+
+- UI strings in `prompt/ui.html`: Indonesian, ≤1 short sentence per helper; no filler English.
+- Docs: one idea per bullet; link paths that exist in repo.
+- Do not add dependencies or submodules to “install everything” from awesome lists.
+- Use skill `anti-slop-edits` when rewriting user-facing text.
+- Figma plugin code: no `import (` in comments/strings (SES); see `npm run figma:check`.

@@ -8,6 +8,17 @@ Repositori **plugin Figma** audit Design System SawitPRO (bukan app Kokonus). Ko
 2. **Commit + push** ke GitHub (`sapikkk/design-audit-sawitpro`) — **wajib**, lihat `.cursor/rules/auto-push.mdc`.
 3. Jangan push secret atau export audit dari file produksi.
 
+## Skills & aturan Cursor (repo)
+
+| Path | Isi |
+|------|-----|
+| [`.cursor/skills/design-audit-sawitpro/`](.cursor/skills/design-audit-sawitpro/SKILL.md) | Workflow plugin + SES + bundle |
+| [`.cursor/skills/figma-ecosystem-index/`](.cursor/skills/figma-ecosystem-index/SKILL.md) | Indeks GitHub Figma/MCP/agent (referensi, bukan submodule) |
+| [`.cursor/skills/anti-slop-edits/`](.cursor/skills/anti-slop-edits/SKILL.md) | UI/docs tanpa filler AI |
+| [`.cursor/rules/no-ai-slop.mdc`](.cursor/rules/no-ai-slop.mdc) | Guardrail teks user-facing |
+
+`npm run skills:verify` — daftar skill proyek. `npm run skills:optional` — clone referensi ke `~/figma-dev-references` (opsional, di luar repo).
+
 ## Dokumen wajib baca
 
 | Dokumen | Isi |
