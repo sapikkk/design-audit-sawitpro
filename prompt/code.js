@@ -1,6 +1,6 @@
-// DS Audit Pro — code.js (v2.2.8)
+// DS Audit Pro — code.js (v1.0.0)
 // Berjalan di sandbox Figma. Tidak ada LLM, tidak ada network, tidak ada token di config.
-console.log('[DESIGN AUDIT SAWITPRO] plugin v2.2.8 loaded');
+console.log('[DESIGN AUDIT SAWITPRO] plugin v1.0.0 loaded');
 // Semua token dan komponen ditemukan dari file aktif dan library yang di-enable.
 // Mode: audit, apply, undo (in-memory), annotate, clear-annotations, select.
 
@@ -54,7 +54,8 @@ const FILE_CATEGORY_LABEL = {
   OTHER: 'Lainnya'
 };
 
-const PLUGIN_VERSION = '2.2.8';
+const PLUGIN_VERSION = '1.0.0';
+const PLUGIN_VERSION_LABEL = '1.0';
 
 /** Aturan audit (sumber: rules.json di repo — disematkan, tanpa upload file). */
 const AUDIT_RULES = {
@@ -506,6 +507,7 @@ async function bootUi() {
     figma.ui.postMessage({
       type: 'file-context',
       pluginVersion: PLUGIN_VERSION,
+      pluginVersionLabel: PLUGIN_VERSION_LABEL,
       fileName: figma.root.name,
       fileKey: figma.fileKey || '',
       fileCategory: cat,
@@ -524,6 +526,7 @@ async function bootUi() {
     figma.ui.postMessage({
       type: 'boot-hints',
       pluginVersion: PLUGIN_VERSION,
+      pluginVersionLabel: PLUGIN_VERSION_LABEL,
       libraryCollectionCount,
       selectionCount: figma.currentPage.selection.length
     });
@@ -537,7 +540,7 @@ async function bootUi() {
 }
 
 figma.showUI(__html__, { width: 420, height: 760, themeColors: true });
-figma.notify('DESIGN AUDIT SawitPRO v' + PLUGIN_VERSION + ' — panel siap', { timeout: 2800 });
+figma.notify('DESIGN AUDIT SawitPRO v' + PLUGIN_VERSION_LABEL + ' — panel siap', { timeout: 2800 });
 bootUi();
 
 // ---------- Pencocokan nilai ----------

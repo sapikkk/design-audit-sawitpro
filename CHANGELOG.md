@@ -2,6 +2,13 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## [1.0.0] — 2026-10-27
+
+### Release
+
+- Versi publish **1.0** (semver `1.0.0`). Logo SawitPRO di header panel (`icon.png` + favicon); `icon.png` 128×128 untuk modal Publish org.
+- Panduan: [`docs/agent/publish-v1.md`](docs/agent/publish-v1.md).
+
 ## [2.2.8] — 2026-10-27
 
 ### Changed

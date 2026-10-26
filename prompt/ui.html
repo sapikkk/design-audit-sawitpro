@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="icon.png">
 <style>
   :root {
     --font-size-xsmall: 11px;
@@ -55,11 +56,13 @@
     font-size: var(--font-size-xsmall);
     font-weight: 600;
   }
-  .native-bridge img {
-    width: 18px;
-    height: 18px;
+  .native-bridge .plugin-logo {
+    width: 20px;
+    height: 20px;
     border-radius: 4px;
-    object-fit: cover;
+    object-fit: contain;
+    flex-shrink: 0;
+    background: #fff;
   }
   .native-bridge .title { color: var(--brand); }
 
@@ -358,9 +361,9 @@
 <body>
 
 <header class="native-bridge">
-  <img src="brand-icon.png" alt="" width="18" height="18" />
-  <span class="title">Design Audit</span>
-  <span id="pluginVer" style="margin-left:auto;color:var(--text-subtle);font-weight:500">v2.2.8</span>
+  <img class="plugin-logo" src="icon.png" width="20" height="20" alt="" />
+  <span class="title">Design Audit SawitPRO</span>
+  <span id="pluginVer" style="margin-left:auto;color:var(--text-subtle);font-weight:500">v1.0</span>
 </header>
 
 <div class="app">
@@ -755,7 +758,8 @@
     try {
     const m = ev.data && ev.data.pluginMessage;
     if (!m) return;
-    if (m.pluginVersion) $('pluginVer').textContent = 'v' + m.pluginVersion;
+    if (m.pluginVersionLabel) $('pluginVer').textContent = 'v' + m.pluginVersionLabel;
+    else if (m.pluginVersion) $('pluginVer').textContent = 'v' + m.pluginVersion;
     if (m.type === 'theme') applyTheme(m.theme);
     else if (m.type === 'registry-warmup') {
       const h = $('warmupHint');

@@ -3,11 +3,21 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$ROOT/figma-dev"
+ICON_SRC="$ROOT/assets/sawitpro-icon.png"
 mkdir -p "$OUT"
+
+if [[ -f "$ICON_SRC" ]]; then
+  sips -z 128 128 "$ICON_SRC" --out "$ROOT/icon.png" >/dev/null
+  sips -z 128 128 "$ICON_SRC" --out "$ROOT/prompt/icon.png" >/dev/null
+  sips -z 72 72 "$ICON_SRC" --out "$ROOT/prompt/brand-icon.png" >/dev/null
+fi
+
 cp "$ROOT/prompt/code.js" "$OUT/code.js"
 cp "$ROOT/prompt/ui.html" "$OUT/ui.html"
-cp "$ROOT/icon.png" "$OUT/icon.png" 2>/dev/null || true
-cp "$ROOT/prompt/brand-icon.png" "$OUT/brand-icon.png" 2>/dev/null || true
+cp "$ROOT/icon.png" "$OUT/icon.png"
+cp "$ROOT/prompt/icon.png" "$OUT/icon.png"
+cp "$ROOT/prompt/brand-icon.png" "$OUT/brand-icon.png"
+
 cat > "$OUT/manifest.json" << 'JSON'
 {
   "name": "DESIGN AUDIT SAWITPRO",
@@ -24,8 +34,7 @@ cat > "$OUT/manifest.json" << 'JSON'
 }
 JSON
 node --check "$OUT/code.js"
-# Root code.js salah sering dipakai manifest lama / template — isi dengan kode asli.
 cp "$OUT/code.js" "$ROOT/code.js"
 node --check "$ROOT/code.js"
 echo "OK bundle → $OUT/manifest.json"
-echo "OK sync  → $ROOT/code.js (backup manifest salah)"
+echo "OK icons  → icon.png (128), brand-icon.png (72), prompt/icon.png untuk UI"

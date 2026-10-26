@@ -27,6 +27,7 @@ Repositori **plugin Figma** audit Design System SawitPRO (bukan app Kokonus). Ko
 | [`docs/agent/community-linter-comparison.md`](docs/agent/community-linter-comparison.md) | Parity vs plugin Community |
 | [`docs/agent/figma-mcp-design-system-rules.md`](docs/agent/figma-mcp-design-system-rules.md) | DS 3.0 + MCP |
 | [`docs/agent/figma-plugin-icon-publish.md`](docs/agent/figma-plugin-icon-publish.md) | Ikon publish org |
+| [`docs/agent/publish-v1.md`](docs/agent/publish-v1.md) | Checklist publish **v1.0** |
 
 ## Batasan teknis
 

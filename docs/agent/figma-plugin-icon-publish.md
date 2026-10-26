@@ -14,7 +14,8 @@ Referensi: [Publishing to the Community](https://help.figma.com/hc/en-us/article
 |------|--------|-----------|
 | [`../../icon.png`](../../icon.png) | 128×128 | Upload saat publish |
 | [`../../assets/sawitpro-icon.png`](../../assets/sawitpro-icon.png) | Master | Sumber desain |
-| [`../../prompt/brand-icon.png`](../../prompt/brand-icon.png) | 72×72 | Header di dalam panel plugin (iframe) |
+| [`../../prompt/icon.png`](../../prompt/icon.png) | 128×128 | Header panel + `<link rel="icon">` (sejajar `ui.html`) |
+| [`../../prompt/brand-icon.png`](../../prompt/brand-icon.png) | 72×72 | Cadangan; bundle dari master |
 
 ## Langkah (SawitPro — plugin privat org, disarankan)
 
