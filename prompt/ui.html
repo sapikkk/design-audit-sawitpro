@@ -344,6 +344,9 @@
     </div>
 
     <button type="button" class="btn btn-primary" id="runBtn" style="width:100%">Jalankan audit</button>
+    <label class="toggle-row" style="margin-top:6px">
+      <input type="checkbox" id="refreshRegistry"> Muat ulang token library (lebih lambat)
+    </label>
     <div id="progress"></div>
 
     <div class="scroll">
@@ -522,7 +525,12 @@
     notice('');
     $('progress').textContent = 'Memulai audit…';
     $('runBtn').disabled = true;
-    post({ type: 'audit', scope: auditScope, owner: $('owner').value.trim() });
+    post({
+      type: 'audit',
+      scope: auditScope,
+      owner: $('owner').value.trim(),
+      refreshRegistry: $('refreshRegistry').checked
+    });
   };
 
   function statusBadge(status) {
@@ -706,9 +714,19 @@
     } else if (m.type === 'file-context') {
       $('fileContext').textContent = `${m.fileCategoryLabel} · ${m.fileName}`;
     } else if (m.type === 'progress') {
-      $('progress').textContent = m.done > 0
-        ? `Memindai… ${m.done} node`
-        : (m.phase === 'registry' ? 'Memuat token dari library…' : 'Memindai layer…');
+      if (m.done > 0) {
+        $('progress').textContent = `Memindai… ${m.done} node`;
+      } else if (m.phase === 'registry') {
+        if (m.registryLabel === 'cache') {
+          $('progress').textContent = 'Token siap (cache) — memindai…';
+        } else if (m.registryTotal > 0) {
+          $('progress').textContent = `Memuat token… ${m.registryLoaded}/${m.registryTotal}`;
+        } else {
+          $('progress').textContent = 'Menyiapkan token lokal…';
+        }
+      } else {
+        $('progress').textContent = 'Memindai layer…';
+      }
     } else if (m.type === 'audit-result') {
       audit = m.data;
       $('runBtn').disabled = false;

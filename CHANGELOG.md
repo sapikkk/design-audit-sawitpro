@@ -2,6 +2,13 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## [2.2.2] — 2026-10-26
+
+### Changed
+
+- Audit lebih cepat: cache registry per file, import library hanya COLOR + spacing/radius, scan komponen per halaman (bukan seluruh file kecuali cakupan Semua).
+- Progress `Memuat token… X/Y`; opsi **Muat ulang token library** jika DS baru di-enable.
+
 ## [2.2.1] — 2026-10-26
 
 ### Added

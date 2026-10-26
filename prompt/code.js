@@ -160,9 +160,45 @@ async function resolveValue(v, depth) {
   return val;
 }
 
-async function buildRegistry() {
+let registryCache = null;
+let registryCacheKey = '';
+
+function registryFileKey() {
+  return `${figma.fileKey || ''}|${figma.root.name}`;
+}
+
+/** Lewati import library yang tidak dipakai audit (percepat load). */
+function shouldImportLibraryMeta(lv) {
+  const t = lv.resolvedType;
+  if (t === 'COLOR') return true;
+  if (t === 'FLOAT') return SPACING_NAME.test(lv.name) || RADIUS_NAME.test(lv.name);
+  return false;
+}
+
+async function registryProgress(loaded, total, label) {
+  figma.ui.postMessage({
+    type: 'progress',
+    done: 0,
+    phase: 'registry',
+    registryLoaded: loaded,
+    registryTotal: total,
+    registryLabel: label || ''
+  });
+  await sleep();
+}
+
+async function buildRegistry(opts) {
+  const options = opts || {};
+  const scope = options.scope || 'page';
+  const force = options.force === true;
+  const cacheKey = `${registryFileKey()}|${scope}`;
+  if (!force && registryCache && registryCacheKey === cacheKey) {
+    await registryProgress(1, 1, 'cache');
+    return registryCache;
+  }
+
   const reg = {
-    schemaVersion: '1.0',
+    schemaVersion: '1.1',
     builtAt: new Date().toISOString(),
     colorVariables: [],
     spacingVariables: [],
@@ -171,7 +207,8 @@ async function buildRegistry() {
     componentKeys: [],
     componentNames: [],
     libraryCollections: [],
-    notes: []
+    notes: [],
+    fromCache: false
   };
   const seen = new Set();
 
@@ -188,10 +225,9 @@ async function buildRegistry() {
     }
   }
 
-  // 1. Variabel lokal
+  await registryProgress(0, 0, 'local');
   for (const v of await figma.variables.getLocalVariablesAsync()) await addVar(v, 'local');
 
-  // 2. Variabel dari library yang di-enable (perlu permission teamlibrary)
   let libCols = [];
   try {
     libCols = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
@@ -199,6 +235,8 @@ async function buildRegistry() {
     reg.notes.push('teamLibrary tidak tersedia: cek permission "teamlibrary" di manifest.');
   }
   reg.libraryCollections = libCols.map((c) => c.libraryName + ' / ' + c.name);
+
+  const importQueue = [];
   for (const lc of libCols) {
     let items = [];
     try {
@@ -208,14 +246,23 @@ async function buildRegistry() {
       continue;
     }
     for (const lv of items) {
-      try {
-        const v = await figma.variables.importVariableByKeyAsync(lv.key);
-        await addVar(v, 'library');
-      } catch (e) { /* lewati variabel yang gagal di-import */ }
+      if (shouldImportLibraryMeta(lv)) importQueue.push(lv);
     }
   }
 
-  // 3. Text style lokal
+  const totalLib = importQueue.length;
+  let loadedLib = 0;
+  for (const lv of importQueue) {
+    loadedLib++;
+    if (loadedLib === 1 || loadedLib % 40 === 0 || loadedLib === totalLib) {
+      await registryProgress(loadedLib, totalLib, 'library');
+    }
+    try {
+      const v = await figma.variables.importVariableByKeyAsync(lv.key);
+      await addVar(v, 'library');
+    } catch (e) { /* lewati */ }
+  }
+
   for (const s of await figma.getLocalTextStylesAsync()) {
     reg.textStyles.push({
       name: s.name,
@@ -228,19 +275,29 @@ async function buildRegistry() {
     });
   }
 
-  // 4. Komponen lokal
-  await figma.loadAllPagesAsync();
-  const comps = figma.root.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] });
+  let comps;
+  if (scope === 'all') {
+    await figma.loadAllPagesAsync();
+    comps = figma.root.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] });
+  } else {
+    comps = figma.currentPage.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] });
+  }
   reg.componentKeys = [...new Set(comps.filter((c) => c.type === 'COMPONENT').map((c) => c.key))];
   reg.componentNames = [...new Set(comps.map((c) => c.name))];
 
   reg.notes.push('Style dan komponen dari library tidak bisa didaftar lewat API; yang dipakai akan terdeteksi saat audit.');
+  if (totalLib > 0) {
+    reg.notes.push(`Library: ${loadedLib} variabel audit-relevant di-import (warna + spacing/radius).`);
+  }
   reg.variableCatalog = [
     ...reg.colorVariables,
     ...reg.spacingVariables,
     ...reg.radiusVariables
   ].map((v) => ({ name: v.name, key: v.key, id: v.id, kind: v.hex ? 'COLOR' : 'FLOAT' }))
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  registryCache = reg;
+  registryCacheKey = cacheKey;
   return reg;
 }
 
@@ -818,7 +875,7 @@ function variableUsageSummary(reg, usedVariableIds) {
 async function runAudit(msg) {
   figma.ui.postMessage({ type: 'progress', done: 0, phase: 'registry' });
   const rules = AUDIT_RULES;
-  const reg = await buildRegistry();
+  const reg = await buildRegistry({ scope: msg.scope || 'page', force: msg.refreshRegistry === true });
   figma.ui.postMessage({ type: 'progress', done: 0, phase: 'scan' });
 
   const cats = {};
@@ -1233,7 +1290,7 @@ async function remapVariable(scope, fromKey, toKey) {
 }
 
 async function loadVariableCatalog() {
-  const reg = await buildRegistry();
+  const reg = await buildRegistry({ scope: 'page', force: true });
   figma.ui.postMessage({
     type: 'variable-catalog',
     catalog: buildVariableCatalog(reg)
