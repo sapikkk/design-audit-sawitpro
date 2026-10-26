@@ -59,7 +59,8 @@ Kirim ke tim (Slack/Notion):
 |--------|--------|
 | Console: **TypeScript… generate code.js** | Manifest mengarah ke **`code.js` root** (stub). Hapus plugin Development lama → **Import** [`manifest.json`](../../manifest.json) **root** (`main`: `prompt/code.js`). |
 | Console: **FILE_CATEGORY_LABEL is not initialized** | Versi/cache plugin lama → tutup plugin → import ulang manifest root. |
-| Console: **import expression rejected** | Biasanya plugin dev lain / cache; hapus duplikat **DESIGN AUDIT SAWITPRO** di Development, sisakan satu dari folder repo. |
+| Console: **import expression rejected** | Import salah (mis. `prompt/code.js` sebagai manifest) atau plugin dev lain. `npm run figma:fix-import` + hapus duplikat di Development. |
+| Pakai **figma.com di browser** | Development plugin bisa cache lama; untuk import pertama pakai **Figma Desktop**, lalu hard refresh browser jika perlu. |
 | LaunchDarkly / Datadog / Gravatar 403 | Noise Figma web app — **abaikan**, bukan plugin Anda. |
 | **Memuat token…** lama ( pertama kali ) | Normal 10–60 dtk; tunggu **X/Y**. Buka plugin beberapa detik dulu (warmup) atau audit ulang (cache). |
 | Audit 100% tanpa temuan padahal ada raw color | Library DS belum di-enable di file ini |

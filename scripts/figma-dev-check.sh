@@ -46,6 +46,25 @@ if [[ -f "$ROOT/code.js" ]]; then
   fi
 fi
 
+SETTINGS="$HOME/Library/Application Support/Figma/settings.json"
+if [[ -f "$SETTINGS" ]]; then
+  if python3 -c "
+import json, sys
+p='$SETTINGS'
+d=json.load(open(p))
+for i in d.get('localFileExtensions', []):
+  m=i.get('manifestPath','')
+  if m.endswith('/prompt/code.js') or m.endswith('/prompt/ui.html'):
+    sys.exit(1)
+" 2>/dev/null; then
+    : # ok
+  else
+    echo "WARN: Figma pernah mendaftar prompt/code.js atau ui.html sebagai plugin."
+    echo "      Jalankan: npm run figma:fix-import"
+    echo ""
+  fi
+fi
+
 echo "----------------------------------------"
 echo "Di Figma Desktop (sekali):"
 echo "  Plugins → Development → Import from manifest…"

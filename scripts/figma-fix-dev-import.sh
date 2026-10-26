@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+# Bersihkan entri Figma Desktop yang salah (import code.js/ui.html sebagai plugin).
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+SETTINGS="${FIGMA_SETTINGS:-$HOME/Library/Application Support/Figma/settings.json}"
+MANIFEST="$ROOT/manifest.json"
+
+echo "== Perbaikan import Development (Figma Desktop) =="
+echo "Repo:   $ROOT"
+echo "Settings: $SETTINGS"
+echo ""
+
+if [[ ! -f "$MANIFEST" ]]; then
+  echo "ERROR: manifest.json root tidak ditemukan."
+  exit 1
+fi
+
+if [[ ! -f "$SETTINGS" ]]; then
+  echo "WARN: settings.json tidak ada (pakai Figma Desktop sekali, lalu ulangi)."
+  echo "Tanpa Desktop, lakukan manual di browser:"
+  echo "  Plugins → Development → hapus semua DESIGN AUDIT / template TypeScript"
+  echo "  Import from manifest → $MANIFEST"
+  exit 0
+fi
+
+BACKUP="$SETTINGS.bak.$(date +%Y%m%d-%H%M%S)"
+cp "$SETTINGS" "$BACKUP"
+echo "Backup: $BACKUP"
+echo ""
+
+python3 << PY
+import json, os
+settings_path = os.path.expanduser("$SETTINGS")
+manifest = "$MANIFEST"
+with open(settings_path, encoding="utf-8") as f:
+    data = json.load(f)
+ext = data.get("localFileExtensions")
+if not isinstance(ext, list):
+    print("localFileExtensions tidak ada — tidak ada yang dibersihkan.")
+    raise SystemExit(0)
+
+keep = []
+removed = []
+for item in ext:
+    path = item.get("manifestPath") or ""
+    if path.endswith("/prompt/code.js") or path.endswith("/prompt/ui.html"):
+        removed.append(path)
+        continue
+    if "SAWITPRO AUDIT PLUGIN" in path and path.endswith("manifest.json") and path != manifest:
+        removed.append(path)
+        continue
+    keep.append(item)
+
+if removed:
+    data["localFileExtensions"] = keep
+    with open(settings_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, separators=(",", ":"))
+    print("Dihapus dari localFileExtensions:")
+    for p in removed:
+        print("  -", p)
+else:
+    print("Tidak ada entri salah di localFileExtensions.")
+
+print("")
+print("Entri manifest plugin yang tersisa:")
+for item in keep:
+    p = item.get("manifestPath", "")
+    if "AUDIT" in p.upper() or "SAWITPRO" in p.upper():
+        print(" ", p, "→", item.get("lastKnownName", "?"))
+PY
+
+echo ""
+echo "----------------------------------------"
+echo "Di Figma (Desktop disarankan):"
+echo "  1. Plugins → Development → Remove semua plugin audit/template duplikat"
+echo "     (yang error TypeScript / FILE_CATEGORY_LABEL = versi lama)."
+echo "  2. Import from manifest… → HANYA file ini:"
+echo "     $MANIFEST"
+echo "  3. Tutup panel plugin → jalankan lagi DESIGN AUDIT SAWITPRO."
+echo ""
+echo "Console yang BOLEH diabaikan: LaunchDarkly 429, Gravatar CORS, Datadog 403."
+echo "Console yang HARUS hilang setelah langkah di atas:"
+echo "  - TypeScript… generate code.js"
+echo "  - FILE_CATEGORY_LABEL is not initialized"
+echo "  - SyntaxError: possible import expression rejected"
+echo "----------------------------------------"

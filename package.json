@@ -5,6 +5,7 @@
   "main": "code.js",
   "scripts": {
     "figma:check": "bash scripts/figma-dev-check.sh",
+    "figma:fix-import": "bash scripts/figma-fix-dev-import.sh",
     "figma:open-manifest": "open -R manifest.json",
     "build": "tsc -p tsconfig.json",
     "lint": "eslint .",
