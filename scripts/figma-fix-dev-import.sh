@@ -47,9 +47,11 @@ removed = []
 seen = set()
 for item in ext:
     path = item.get("manifestPath") or ""
+    meta = item.get("fileMetadata") or {}
+    ftype = meta.get("type") or ""
     if not path.endswith("manifest.json"):
         if "SAWITPRO AUDIT PLUGIN" in path or "design-audit" in path.lower():
-            removed.append(path)
+            removed.append(path + (f" ({ftype})" if ftype else ""))
         continue
     if path in seen:
         removed.append(path + " (duplikat)")

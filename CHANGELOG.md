@@ -2,6 +2,12 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## [2.2.6] — 2026-10-26
+
+### Fixed
+
+- **SyntaxError: possible import expression rejected** — komentar/string dengan teks `import (` memicu censor SES Figma; wording disesuaikan. `figma:check` menolak pola itu ke depannya.
+
 ## [2.2.5] — 2026-10-26
 
 ### Changed

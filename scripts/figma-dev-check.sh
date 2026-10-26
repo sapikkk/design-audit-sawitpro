@@ -43,11 +43,16 @@ if grep -E '^[[:space:]]*import[[:space:]]|^[[:space:]]*export[[:space:]]' "$ROO
   echo "ERROR: ES import/export di prompt/code.js — sandbox Figma menolak."
   exit 1
 fi
-if ! grep -q "PLUGIN_VERSION = '2.2.5'" "$ROOT/prompt/code.js"; then
-  echo "ERROR: PLUGIN_VERSION 2.2.5 tidak ada di code.js"
+if grep -E 'import[[:space:]]*\(' "$ROOT/prompt/code.js" >/dev/null; then
+  echo "ERROR: Pola 'import (' di code.js — SES Figma false-positive (SyntaxError line 1)."
+  grep -n -E 'import[[:space:]]*\(' "$ROOT/prompt/code.js" || true
   exit 1
 fi
-echo "  OK  no ESM import + version 2.2.5"
+if ! grep -q "PLUGIN_VERSION = '2.2.6'" "$ROOT/prompt/code.js"; then
+  echo "ERROR: PLUGIN_VERSION 2.2.6 tidak ada di code.js"
+  exit 1
+fi
+echo "  OK  no ESM import + no SES import( trap + version 2.2.6"
 echo ""
 
 if [[ -f "$ROOT/code.js" ]]; then

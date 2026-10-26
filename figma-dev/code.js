@@ -1,6 +1,6 @@
-// DS Audit Pro — code.js (v2.2.5)
+// DS Audit Pro — code.js (v2.2.6)
 // Berjalan di sandbox Figma. Tidak ada LLM, tidak ada network, tidak ada token di config.
-console.log('[DESIGN AUDIT SAWITPRO] plugin v2.2.5 loaded');
+console.log('[DESIGN AUDIT SAWITPRO] plugin v2.2.6 loaded');
 // Semua token dan komponen ditemukan dari file aktif dan library yang di-enable.
 // Mode: audit, apply, undo (in-memory), annotate, clear-annotations, select.
 
@@ -54,7 +54,7 @@ const FILE_CATEGORY_LABEL = {
   OTHER: 'Lainnya'
 };
 
-const PLUGIN_VERSION = '2.2.5';
+const PLUGIN_VERSION = '2.2.6';
 
 /** Aturan audit (sumber: rules.json di repo — disematkan, tanpa upload file). */
 const AUDIT_RULES = {
@@ -174,7 +174,7 @@ function registryFileKey() {
   return `${figma.fileKey || ''}|${figma.root.name}`;
 }
 
-/** Koleksi variabel DS — prioritas import (Spacing/Radius sering di file terpisah). */
+/** Koleksi variabel DS — prioritas Spacing/Radius (sering di file terpisah). */
 function libraryCollectionPriority(lc) {
   const label = `${lc.libraryName || ''} ${lc.name || ''}`.toLowerCase();
   if (/ds\s*3\.0|design.system|3\.0.*color|color.*3\.0/.test(label)) return 0;
@@ -313,7 +313,7 @@ async function buildRegistryUncached(scope, silent) {
 
   reg.notes.push('Style dan komponen dari library tidak bisa didaftar lewat API; yang dipakai akan terdeteksi saat audit.');
   if (totalLib > 0) {
-    reg.notes.push(`Library: ${loadedLib} variabel audit-relevant di-import (warna + spacing/radius).`);
+    reg.notes.push(`Library: ${loadedLib} variabel audit-relevant diimpor: warna + spacing/radius.`);
   }
   reg.variableCatalog = [
     ...reg.colorVariables,
