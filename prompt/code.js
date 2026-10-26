@@ -3,8 +3,6 @@
 // Semua token dan komponen ditemukan dari file aktif dan library yang di-enable.
 // Mode: audit, apply, undo (in-memory), annotate, clear-annotations, select.
 
-figma.showUI(__html__, { width: 420, height: 760, themeColors: true });
-
 const ANNOTATION_PAGE = '🔍 DS Audit';
 const MAX_ANNOTATIONS = 500;
 const CATEGORIES = ['AUTO_LAYOUT', 'TYPOGRAPHY', 'COLOR', 'SPACING', 'COMPONENT', 'NAMING', 'VARIABLE'];
@@ -54,6 +52,8 @@ const FILE_CATEGORY_LABEL = {
   PLATFORM: 'Platform internal',
   OTHER: 'Lainnya'
 };
+
+figma.showUI(__html__, { width: 420, height: 760, themeColors: true });
 
 /** Aturan audit (sumber: rules.json di repo — disematkan, tanpa upload file). */
 const AUDIT_RULES = {
