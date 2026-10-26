@@ -2,6 +2,13 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## [2.2.3] — 2026-10-26
+
+### Changed
+
+- **Warmup:** token library dimuat di background saat plugin dibuka; chip “Token siap (N)”.
+- Cache token shared antar cakupan Seleksi/Halaman; koleksi DS 3.0 Color di-import lebih dulu.
+
 ## [2.2.2] — 2026-10-26
 
 ### Changed

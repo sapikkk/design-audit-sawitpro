@@ -57,6 +57,7 @@ Kirim ke tim (Slack/Notion):
 
 | Gejala | Solusi |
 |--------|--------|
+| **Memuat token…** lama ( pertama kali ) | Normal 10–60 dtk; tunggu **X/Y**. Buka plugin beberapa detik dulu (warmup) atau audit ulang (cache). |
 | Audit 100% tanpa temuan padahal ada raw color | Library DS belum di-enable di file ini |
 | Mode **Seleksi** tidak jalan | Pilih minimal satu layer di kanvas |
 | Tema “Fallback SawitPRO” | Import variabel DS 3.0 Color ke file atau enable library |

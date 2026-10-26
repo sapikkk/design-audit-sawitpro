@@ -326,6 +326,7 @@
   <div class="toolbar">
     <span class="chip" id="fileContext">Memuat konteks…</span>
     <span class="chip muted" id="themeHint">Memuat DS…</span>
+    <span class="chip muted" id="warmupHint" style="display:none"></span>
   </div>
 
   <div class="panel on" id="p-audit">
@@ -703,7 +704,18 @@
     const m = ev.data && ev.data.pluginMessage;
     if (!m) return;
     if (m.type === 'theme') applyTheme(m.theme);
-    else if (m.type === 'boot-hints') {
+    else if (m.type === 'registry-warmup') {
+      const h = $('warmupHint');
+      if (m.status === 'started') {
+        h.style.display = '';
+        h.textContent = 'Menyiapkan token di background…';
+      } else if (m.status === 'ready') {
+        h.style.display = '';
+        h.textContent = `Token siap (${m.tokenCount}) — audit lebih cepat`;
+      } else if (m.status === 'error') {
+        h.style.display = 'none';
+      }
+    } else if (m.type === 'boot-hints') {
       const w = $('libraryWarn');
       if (m.libraryCollectionCount === 0) {
         w.style.display = 'block';

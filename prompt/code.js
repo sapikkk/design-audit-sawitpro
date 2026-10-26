@@ -162,9 +162,35 @@ async function resolveValue(v, depth) {
 
 let registryCache = null;
 let registryCacheKey = '';
+let registryTokenCache = null;
+let registryTokenCacheKey = '';
+let registryWarmupPromise = null;
 
 function registryFileKey() {
   return `${figma.fileKey || ''}|${figma.root.name}`;
+}
+
+/** Koleksi variabel DS — prioritas import (Spacing/Radius sering di file terpisah). */
+function libraryCollectionPriority(lc) {
+  const label = `${lc.libraryName} ${lc.name}`.toLowerCase();
+  if (/ds\s*3\.0|design.system|3\.0.*color|color.*3\.0/.test(label)) return 0;
+  if (/color|semantic|brand|token/.test(label)) return 1;
+  if (/spacing|radius|size|dimension/.test(label)) return 2;
+  return 3;
+}
+
+async function buildComponentIndex(scope) {
+  let comps;
+  if (scope === 'all') {
+    await figma.loadAllPagesAsync();
+    comps = figma.root.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] });
+  } else {
+    comps = figma.currentPage.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] });
+  }
+  return {
+    componentKeys: [...new Set(comps.filter((c) => c.type === 'COMPONENT').map((c) => c.key))],
+    componentNames: [...new Set(comps.map((c) => c.name))]
+  };
 }
 
 /** Lewati import library yang tidak dipakai audit (percepat load). */
@@ -175,26 +201,52 @@ function shouldImportLibraryMeta(lv) {
   return false;
 }
 
-async function registryProgress(loaded, total, label) {
-  figma.ui.postMessage({
-    type: 'progress',
-    done: 0,
-    phase: 'registry',
-    registryLoaded: loaded,
-    registryTotal: total,
-    registryLabel: label || ''
-  });
+async function registryProgress(loaded, total, label, silent) {
+  if (!silent) {
+    figma.ui.postMessage({
+      type: 'progress',
+      done: 0,
+      phase: 'registry',
+      registryLoaded: loaded,
+      registryTotal: total,
+      registryLabel: label || ''
+    });
+  }
   await sleep();
+}
+
+function cloneRegistryTokens(src) {
+  return JSON.parse(JSON.stringify(src));
 }
 
 async function buildRegistry(opts) {
   const options = opts || {};
   const scope = options.scope || 'page';
   const force = options.force === true;
-  const cacheKey = `${registryFileKey()}|${scope}`;
+  const silent = options.silent === true;
+  const fileKey = registryFileKey();
+  const cacheKey = `${fileKey}|${scope}`;
+  if (force) {
+    registryTokenCache = null;
+    registryTokenCacheKey = '';
+    registryCache = null;
+    registryCacheKey = '';
+  }
   if (!force && registryCache && registryCacheKey === cacheKey) {
-    await registryProgress(1, 1, 'cache');
+    await registryProgress(1, 1, 'cache', silent);
     return registryCache;
+  }
+  if (!force && registryTokenCache && registryTokenCacheKey === fileKey) {
+    const comps = await buildComponentIndex(scope);
+    const reg = {
+      ...cloneRegistryTokens(registryTokenCache),
+      ...comps,
+      builtAt: new Date().toISOString()
+    };
+    registryCache = reg;
+    registryCacheKey = cacheKey;
+    await registryProgress(1, 1, 'cache', silent);
+    return reg;
   }
 
   const reg = {
@@ -225,7 +277,7 @@ async function buildRegistry(opts) {
     }
   }
 
-  await registryProgress(0, 0, 'local');
+  await registryProgress(0, 0, 'local', silent);
   for (const v of await figma.variables.getLocalVariablesAsync()) await addVar(v, 'local');
 
   let libCols = [];
@@ -234,6 +286,7 @@ async function buildRegistry(opts) {
   } catch (e) {
     reg.notes.push('teamLibrary tidak tersedia: cek permission "teamlibrary" di manifest.');
   }
+  libCols = libCols.slice().sort((a, b) => libraryCollectionPriority(a) - libraryCollectionPriority(b));
   reg.libraryCollections = libCols.map((c) => c.libraryName + ' / ' + c.name);
 
   const importQueue = [];
@@ -254,8 +307,8 @@ async function buildRegistry(opts) {
   let loadedLib = 0;
   for (const lv of importQueue) {
     loadedLib++;
-    if (loadedLib === 1 || loadedLib % 40 === 0 || loadedLib === totalLib) {
-      await registryProgress(loadedLib, totalLib, 'library');
+    if (loadedLib === 1 || loadedLib % 60 === 0 || loadedLib === totalLib) {
+      await registryProgress(loadedLib, totalLib, 'library', silent);
     }
     try {
       const v = await figma.variables.importVariableByKeyAsync(lv.key);
@@ -275,15 +328,9 @@ async function buildRegistry(opts) {
     });
   }
 
-  let comps;
-  if (scope === 'all') {
-    await figma.loadAllPagesAsync();
-    comps = figma.root.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] });
-  } else {
-    comps = figma.currentPage.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] });
-  }
-  reg.componentKeys = [...new Set(comps.filter((c) => c.type === 'COMPONENT').map((c) => c.key))];
-  reg.componentNames = [...new Set(comps.map((c) => c.name))];
+  const comps = await buildComponentIndex(scope);
+  reg.componentKeys = comps.componentKeys;
+  reg.componentNames = comps.componentNames;
 
   reg.notes.push('Style dan komponen dari library tidak bisa didaftar lewat API; yang dipakai akan terdeteksi saat audit.');
   if (totalLib > 0) {
@@ -296,9 +343,29 @@ async function buildRegistry(opts) {
   ].map((v) => ({ name: v.name, key: v.key, id: v.id, kind: v.hex ? 'COLOR' : 'FLOAT' }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  const { componentKeys, componentNames, ...tokenPart } = reg;
+  registryTokenCache = cloneRegistryTokens(tokenPart);
+  registryTokenCacheKey = fileKey;
   registryCache = reg;
   registryCacheKey = cacheKey;
   return reg;
+}
+
+function warmRegistryInBackground() {
+  if (registryWarmupPromise) return registryWarmupPromise;
+  registryWarmupPromise = (async () => {
+    try {
+      figma.ui.postMessage({ type: 'registry-warmup', status: 'started' });
+      const reg = await buildRegistry({ scope: 'page', silent: true });
+      const n = reg.colorVariables.length + reg.spacingVariables.length + reg.radiusVariables.length;
+      figma.ui.postMessage({ type: 'registry-warmup', status: 'ready', tokenCount: n });
+    } catch (e) {
+      figma.ui.postMessage({ type: 'registry-warmup', status: 'error' });
+    } finally {
+      registryWarmupPromise = null;
+    }
+  })();
+  return registryWarmupPromise;
 }
 
 /** Tema UI dari library **1. DS 3.0: Color** (Semantic + Global Token). */
@@ -417,6 +484,7 @@ async function bootUi() {
     libraryCollectionCount,
     selectionCount: figma.currentPage.selection.length
   });
+  warmRegistryInBackground();
 }
 bootUi();
 
