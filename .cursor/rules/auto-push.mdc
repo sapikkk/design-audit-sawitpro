@@ -1,0 +1,16 @@
+---
+description: Setelah perubahan selesai di repo ini, commit dan push ke origin/main tanpa menunggu diminta lagi.
+alwaysApply: true
+---
+
+# Git: commit + push otomatis
+
+Untuk **DESIGN AUDIT SAWITPRO** (`design-audit-sawitpro`):
+
+1. Setelah implementasi atau dokumentasi selesai dan lulus pengecekan dasar (syntax `prompt/code.js`), **buat commit** dengan pesan Conventional Commits (fokus *why*).
+2. **Push** ke `origin` pada branch kerja (`main` atau feature branch) **tanpa** menunggu user mengetik "push" lagi — kecuali user explicitly meminta *jangan* push.
+3. Jangan commit: `.env`, kredensial, export audit sensitif.
+4. Jangan force-push `main`.
+5. Jika push gagal (auth): laporkan error dan arahkan `gh auth login` / refresh token; retry setelah user memperbaiki auth.
+
+Ringkas status di chat: commit hash, branch, URL repo.

@@ -1,4 +1,18 @@
-# Dokumentasi Kokonus Farm
+# Dokumentasi
+
+## Plugin Figma — DESIGN AUDIT SAWITPRO (repo ini)
+
+| Tujuan | Dokumen |
+|--------|---------|
+| Index agent + plugin | [`agent/README.md`](agent/README.md) |
+| vs Community linters | [`agent/community-linter-comparison.md`](agent/community-linter-comparison.md) |
+| DS 3.0 + MCP | [`agent/figma-mcp-design-system-rules.md`](agent/figma-mcp-design-system-rules.md) |
+| Ikon publish | [`agent/figma-plugin-icon-publish.md`](agent/figma-plugin-icon-publish.md) |
+| Changelog | [`../CHANGELOG.md`](../CHANGELOG.md) |
+
+---
+
+## Dokumentasi Kokonus Farm (arsip / referensi tim)
 
 Pusat baca untuk tim produk, developer, QA, dan penelitian. Semua Markdown proyek (kecuali `README.md`, `AGENTS.md`, `CHANGELOG.md` di root repo) hidup di bawah folder `docs/`.
 
@@ -20,7 +34,7 @@ Pusat baca untuk tim produk, developer, QA, dan penelitian. Semua Markdown proye
 | [`testing/`](testing/) | QA | Blackbox, panduan demo, data uji |
 | [`deployment/`](deployment/) | DevOps | Vercel, Postgres, go-live |
 | [`audit/`](audit/) | Review teknis | RBAC, perf, keamanan, UI responsif |
-| [`agent/`](agent/) | Cursor / AI | Stack agent, vendor, Superpowers |
+| [`agent/`](agent/) | Cursor / AI | Stack agent, vendor, Superpowers, **Figma MCP + DS SawitPRO** |
 | [`referensi/`](referensi/) | Integrasi | Kontrak API |
 | [`skills/`](skills/) | Agent domain | Kokonus, akuntansi, Semgrep, … |
 | [`arsip/`](arsip/) | Riwayat | Notulensi rapat, catatan progres teknis lama |
@@ -40,6 +54,7 @@ Pusat baca untuk tim produk, developer, QA, dan penelitian. Semua Markdown proye
 | User story — format manusia | [`agile/panduan-user-story.md`](agile/panduan-user-story.md) |
 | Uji blackbox | [`testing/uji-blackbox.md`](testing/uji-blackbox.md) |
 | Agent Cursor (`/kokonus`) | [`agent/cursor-agent-stack.md`](agent/cursor-agent-stack.md) · [`AGENTS.md`](../AGENTS.md) |
+| Plugin audit Figma + MCP | [`agent/README.md`](agent/README.md) · [`agent/figma-mcp-design-system-rules.md`](agent/figma-mcp-design-system-rules.md) |
 | Gaya menulis semua `.md` | [`standards/gaya-dokumen.md`](standards/gaya-dokumen.md) |
 
 ---

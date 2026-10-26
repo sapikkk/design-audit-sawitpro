@@ -3,11 +3,12 @@
 // Semua token dan komponen ditemukan dari file aktif dan library yang di-enable.
 // Mode: audit, apply, undo (in-memory), annotate, clear-annotations, select.
 
-figma.showUI(__html__, { width: 480, height: 680, themeColors: true });
+figma.showUI(__html__, { width: 420, height: 760, themeColors: true });
 
 const ANNOTATION_PAGE = '🔍 DS Audit';
 const MAX_ANNOTATIONS = 500;
-const CATEGORIES = ['AUTO_LAYOUT', 'TYPOGRAPHY', 'COLOR', 'SPACING', 'COMPONENT', 'NAMING'];
+const CATEGORIES = ['AUTO_LAYOUT', 'TYPOGRAPHY', 'COLOR', 'SPACING', 'COMPONENT', 'NAMING', 'VARIABLE'];
+const NO_TOKENS_TAG = /\[no-tokens\]/i;
 const DEFAULT_NAME = /^(Frame|Rectangle|Group|Vector|Text|Ellipse) \d+$/;
 const SPACING_FIELDS = ['itemSpacing', 'paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom'];
 const RADIUS_CORNERS = ['topLeftRadius', 'topRightRadius', 'bottomLeftRadius', 'bottomRightRadius'];
@@ -20,7 +21,10 @@ const ANNOTATION_STYLE = {
   COLOR: { color: '#E53935', prefix: 'COLOR' },
   COMPONENT: { color: '#0D99FF', prefix: 'COMP' },
   AUTO_LAYOUT: { color: '#795548', prefix: 'LAYOUT' },
-  NAMING: { color: '#9E9E9E', prefix: 'NAME' }
+  NAMING: { color: '#9E9E9E', prefix: 'NAME' },
+  VARIABLE: { color: '#6A1B9A', prefix: 'VAR' },
+  ORPHAN: { color: '#6A1B9A', prefix: 'ORPHAN' },
+  MODE: { color: '#4527A0', prefix: 'MODE' }
 };
 
 const sleep = () => new Promise((r) => setTimeout(r, 0));
@@ -54,12 +58,13 @@ const FILE_CATEGORY_LABEL = {
 /** Aturan audit (sumber: rules.json di repo — disematkan, tanpa upload file). */
 const AUDIT_RULES = {
   weights: {
-    AUTO_LAYOUT: 20,
-    TYPOGRAPHY: 20,
-    COLOR: 20,
-    SPACING: 15,
-    COMPONENT: 20,
-    NAMING: 5
+    AUTO_LAYOUT: 18,
+    TYPOGRAPHY: 18,
+    COLOR: 18,
+    SPACING: 14,
+    COMPONENT: 18,
+    NAMING: 4,
+    VARIABLE: 10
   },
   thresholds: { excellent: 90, warning: 75 },
   nearMatchDeltaE: 2.0,
@@ -71,17 +76,6 @@ const AUDIT_RULES = {
     surface: '^Surface\\/[A-Za-z0-9-]+$'
   }
 };
-
-(function sendFileContext() {
-  const cat = inferFileCategory(figma.root.name);
-  figma.ui.postMessage({
-    type: 'file-context',
-    fileName: figma.root.name,
-    fileKey: figma.fileKey || '',
-    fileCategory: cat,
-    fileCategoryLabel: FILE_CATEGORY_LABEL[cat] || cat
-  });
-})();
 
 // ---------- Warna ----------
 
@@ -241,8 +235,123 @@ async function buildRegistry() {
   reg.componentNames = [...new Set(comps.map((c) => c.name))];
 
   reg.notes.push('Style dan komponen dari library tidak bisa didaftar lewat API; yang dipakai akan terdeteksi saat audit.');
+  reg.variableCatalog = [
+    ...reg.colorVariables,
+    ...reg.spacingVariables,
+    ...reg.radiusVariables
+  ].map((v) => ({ name: v.name, key: v.key, id: v.id, kind: v.hex ? 'COLOR' : 'FLOAT' }))
+    .sort((a, b) => a.name.localeCompare(b.name));
   return reg;
 }
+
+/** Tema UI dari library **1. DS 3.0: Color** (Semantic + Global Token). */
+const UI_THEME_FALLBACK = {
+  brand: '#079455',
+  brandSecondary: '#F5B301',
+  bg: '#F3FAF6',
+  surface: '#FFFFFF',
+  border: '#B9E6CE',
+  text: '#1A1A1A',
+  textMuted: '#5C5C5C',
+  textSubtle: '#8C8C8C',
+  textInverse: '#FFFFFF',
+  btn: '#079455',
+  btnHover: '#067647',
+  danger: '#D92D20',
+  warning: '#F79009',
+  header: '#05603A',
+  source: 'fallback'
+};
+
+const UI_THEME_VAR_MAP = {
+  brand: 'Brand/primary',
+  brandSecondary: 'Brand/Secondary',
+  bg: 'Primary/greenBright-50',
+  surface: 'Neutral/Neutral-0',
+  border: 'Primary/greenBright-200',
+  text: 'TextIcon/Black/primary',
+  textMuted: 'TextIcon/Black/secondary',
+  textSubtle: 'TextIcon/Black/tertiary',
+  textInverse: 'TextIcon/Black/white',
+  btn: 'Primary/greenBright-500',
+  btnHover: 'Primary/greenBright-600',
+  danger: 'Utility/Danger',
+  warning: 'Utility/Warning',
+  header: 'Primary/greenBright-800'
+};
+
+async function hexForVar(v) {
+  const val = await resolveValue(v);
+  if (val && typeof val === 'object' && 'r' in val) return toHex(val);
+  return null;
+}
+
+async function buildUiTheme() {
+  const needed = new Set(Object.values(UI_THEME_VAR_MAP));
+  const hexByVarName = {};
+  const libKeyByName = {};
+
+  for (const v of await figma.variables.getLocalVariablesAsync()) {
+    if (v.resolvedType !== 'COLOR' || !needed.has(v.name)) continue;
+    const hex = await hexForVar(v);
+    if (hex) hexByVarName[v.name] = hex;
+  }
+
+  try {
+    const libCols = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
+    for (const lc of libCols) {
+      let items = [];
+      try {
+        items = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(lc.key);
+      } catch (e) { continue; }
+      for (const lv of items) {
+        if (!needed.has(lv.name) || hexByVarName[lv.name] || libKeyByName[lv.name]) continue;
+        libKeyByName[lv.name] = lv.key;
+      }
+    }
+  } catch (e) { /* teamLibrary unavailable */ }
+
+  for (const name of needed) {
+    if (hexByVarName[name] || !libKeyByName[name]) continue;
+    try {
+      const v = await figma.variables.importVariableByKeyAsync(libKeyByName[name]);
+      if (v.resolvedType === 'COLOR') {
+        const hex = await hexForVar(v);
+        if (hex) hexByVarName[name] = hex;
+      }
+    } catch (e) { /* lewati */ }
+  }
+
+  const theme = {};
+  let resolved = 0;
+  for (const [key, varName] of Object.entries(UI_THEME_VAR_MAP)) {
+    const hex = hexByVarName[varName];
+    theme[key] = hex || UI_THEME_FALLBACK[key];
+    if (hex) resolved++;
+  }
+  const total = Object.keys(UI_THEME_VAR_MAP).length;
+  theme.source = resolved === 0 ? 'fallback'
+    : resolved === total ? 'ds-3.0-color'
+      : 'ds-3.0-color-partial';
+  return theme;
+}
+
+async function bootUi() {
+  const cat = inferFileCategory(figma.root.name);
+  figma.ui.postMessage({
+    type: 'file-context',
+    fileName: figma.root.name,
+    fileKey: figma.fileKey || '',
+    fileCategory: cat,
+    fileCategoryLabel: FILE_CATEGORY_LABEL[cat] || cat
+  });
+  try {
+    figma.ui.postMessage({ type: 'theme', theme: await buildUiTheme() });
+  } catch (e) {
+    figma.ui.postMessage({ type: 'theme', theme: UI_THEME_FALLBACK });
+  }
+}
+bootUi();
 
 // ---------- Pencocokan nilai ----------
 
@@ -397,31 +506,160 @@ function checkTypography(node, ctx, base) {
   });
 }
 
-function checkColor(node, ctx, base) {
-  if (!('fills' in node)) return;
-  const fills = node.fills;
-  if (fills === figma.mixed) {
+function trackBoundVariables(node, ctx) {
+  const bv = node.boundVariables;
+  if (!bv) return;
+  for (const entries of Object.values(bv)) {
+    const list = Array.isArray(entries) ? entries : [entries];
+    for (const entry of list) {
+      if (entry && entry.id) ctx.usedVariableIds.add(entry.id);
+    }
+  }
+}
+
+async function componentHasNoTokens(node) {
+  if (!node || (node.type !== 'INSTANCE' && node.type !== 'COMPONENT' && node.type !== 'COMPONENT_SET')) {
+    return false;
+  }
+  let target = node;
+  if (node.type === 'INSTANCE') {
+    try {
+      target = await node.getMainComponentAsync();
+    } catch (e) {
+      return false;
+    }
+  }
+  if (!target) return false;
+  const desc = target.description || '';
+  return NO_TOKENS_TAG.test(desc);
+}
+
+async function checkVariableBindings(node, ctx, base) {
+  const bv = node.boundVariables;
+  if (!bv) return;
+  for (const [field, entries] of Object.entries(bv)) {
+    const list = Array.isArray(entries) ? entries.filter(Boolean) : entries ? [entries] : [];
+    for (const entry of list) {
+      if (!entry || !entry.id) continue;
+      let v = null;
+      try {
+        v = await figma.variables.getVariableByIdAsync(entry.id);
+      } catch (e) { /* orphan */ }
+      if (!v) {
+        count(ctx, 'VARIABLE', false);
+        addViolation(ctx, base, 'VARIABLE', 'HIGH', `Bind variabel orphan (${field})`, {
+          field,
+          subCategory: 'ORPHAN',
+          targetVariableId: entry.id
+        });
+        continue;
+      }
+      const resolved = await resolveValue(v);
+      if (resolved === null) {
+        count(ctx, 'VARIABLE', false);
+        addViolation(ctx, base, 'VARIABLE', 'MEDIUM', `Alias variabel putus (${v.name})`, {
+          field,
+          subCategory: 'ORPHAN',
+          targetVariableName: v.name,
+          targetVariableKey: v.key
+        });
+        continue;
+      }
+      count(ctx, 'VARIABLE', true);
+    }
+  }
+}
+
+async function auditLocalVariableModes() {
+  const issues = [];
+  const locals = await figma.variables.getLocalVariablesAsync();
+  for (const v of locals) {
+    let col;
+    try {
+      col = await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId);
+    } catch (e) { continue; }
+    if (!col || col.modes.length <= 1) continue;
+    for (const mode of col.modes) {
+      if (v.valuesByMode[mode.modeId] === undefined) {
+        issues.push({
+          variableName: v.name,
+          variableKey: v.key,
+          collectionName: col.name,
+          modeName: mode.name
+        });
+      }
+    }
+  }
+  return issues;
+}
+
+function buildVariableCatalog(reg) {
+  return reg.variableCatalog || [];
+}
+
+function auditPaint(node, ctx, base, kind) {
+  const paints = kind === 'fills' ? node.fills : node.strokes;
+  const field = kind;
+  const label = kind === 'fills' ? 'fill' : 'stroke';
+  if (!('fills' in node) && kind === 'fills') return;
+  if (!('strokes' in node) && kind === 'strokes') return;
+  if (paints === figma.mixed) {
     count(ctx, 'COLOR', false);
-    addViolation(ctx, base, 'COLOR', 'LOW', 'Fill campuran, cek manual');
+    addViolation(ctx, base, 'COLOR', 'LOW', `${label} campuran, cek manual`, { field });
     return;
   }
-  if (!Array.isArray(fills)) return;
-  const solids = fills.filter((p) => p.visible !== false && p.type === 'SOLID');
+  if (!Array.isArray(paints)) return;
+  const solids = paints.filter((p) => p.visible !== false && p.type === 'SOLID');
   if (solids.length === 0) return;
-  const bound = node.boundVariables && node.boundVariables.fills
-    ? node.boundVariables.fills.filter(Boolean).length
+  const boundKey = kind === 'fills' ? 'fills' : 'strokes';
+  const bound = node.boundVariables && node.boundVariables[boundKey]
+    ? node.boundVariables[boundKey].filter(Boolean).length
     : 0;
-  const styled = typeof node.fillStyleId === 'string' && node.fillStyleId !== '';
+  const styled = kind === 'fills'
+    && typeof node.fillStyleId === 'string' && node.fillStyleId !== '';
   const ok = styled || bound >= solids.length;
   count(ctx, 'COLOR', ok);
   if (ok) return;
   const hex = toHex(solids[0].color);
   const m = matchColor(hex, ctx.reg, ctx.rules.nearMatchDeltaE);
-  addViolation(ctx, base, 'COLOR', 'LOW', 'Warna fill tidak terikat variabel atau style', {
-    field: 'fills',
+  addViolation(ctx, base, 'COLOR', 'LOW', `Warna ${label} tidak terikat variabel atau style`, {
+    field,
     currentValue: hex,
     ...m
   });
+}
+
+function checkColor(node, ctx, base) {
+  auditPaint(node, ctx, base, 'fills');
+  if ('strokes' in node && Array.isArray(node.strokes) && node.strokes.some((p) => p.visible !== false)) {
+    auditPaint(node, ctx, base, 'strokes');
+  }
+}
+
+function checkSize(node, ctx, base) {
+  if (!('width' in node) || !('height' in node)) return;
+  if (node.type === 'PAGE' || node.type === 'DOCUMENT') return;
+  const bound = node.boundVariables || {};
+  const spacingPx = ctx.reg.spacingVariables.map((v) => v.px);
+  const fields = [
+    { key: 'width', val: node.width },
+    { key: 'height', val: node.height }
+  ];
+  for (const { key, val } of fields) {
+    if (typeof val !== 'number' || val <= 0) continue;
+    if (bound[key] || spacingPx.includes(val)) {
+      count(ctx, 'SPACING', true);
+      continue;
+    }
+    count(ctx, 'SPACING', false);
+    const m = matchPx(val, ctx.reg.spacingVariables);
+    addViolation(ctx, base, 'SPACING', 'LOW', `${key} raw (${Math.round(val)}px)`, {
+      field: key,
+      currentValue: String(Math.round(val)),
+      subCategory: 'SIZE',
+      ...m
+    });
+  }
 }
 
 function checkSpacing(node, ctx, base) {
@@ -489,11 +727,18 @@ async function checkNode(node, ctx, screen, isScreen) {
   checkTypography(node, ctx, base);
   checkColor(node, ctx, base);
   checkSpacing(node, ctx, base);
+  checkSize(node, ctx, base);
+  trackBoundVariables(node, ctx);
+  await checkVariableBindings(node, ctx, base);
 }
 
 async function walk(node, ctx, screen) {
   if (node.visible === false) {
     ctx.hidden++;
+    return;
+  }
+  if (await componentHasNoTokens(node)) {
+    ctx.noTokensSkipped++;
     return;
   }
   ctx.count++;
@@ -534,29 +779,72 @@ function statusOf(score, th) {
 
 // ---------- Mode: audit ----------
 
+function tokenCoveragePercent(cats) {
+  const keys = ['COLOR', 'TYPOGRAPHY', 'SPACING'];
+  let passed = 0, total = 0;
+  for (const k of keys) {
+    passed += cats[k].passed;
+    total += cats[k].total;
+  }
+  return total > 0 ? (passed / total) * 100 : 100;
+}
+
+function variableUsageSummary(reg, usedVariableIds) {
+  const all = [
+    ...reg.colorVariables,
+    ...reg.spacingVariables,
+    ...reg.radiusVariables
+  ];
+  const defined = all.length;
+  let usedCount = 0;
+  const unusedNames = [];
+  for (const v of all) {
+    if (usedVariableIds.has(v.id)) usedCount++;
+    else if (unusedNames.length < 40) unusedNames.push(v.name);
+  }
+  return { defined, usedOnLayers: usedCount, unusedSample: unusedNames };
+}
+
 async function runAudit(msg) {
   const rules = AUDIT_RULES;
   const reg = await buildRegistry();
 
-  let pages;
-  if (msg.scope === 'all') {
-    await figma.loadAllPagesAsync();
-    pages = figma.root.children;
-  } else {
-    pages = [figma.currentPage];
-  }
-
   const cats = {};
   for (const c of CATEGORIES) cats[c] = { total: 0, passed: 0 };
-  const ctx = { rules, reg, cats, violations: [], hidden: 0, count: 0, unresolved: 0, page: '', pageNames: [] };
+  const ctx = {
+    rules, reg, cats, violations: [], hidden: 0, count: 0, unresolved: 0,
+    page: '', pageNames: [], usedVariableIds: new Set(), noTokensSkipped: 0
+  };
 
-  for (const page of pages) {
-    ctx.page = page.name;
-    ctx.pageNames.push(page.name);
-    for (const child of page.children) await walk(child, ctx, null);
+  if (msg.scope === 'selection') {
+    const roots = figma.currentPage.selection.slice();
+    if (roots.length === 0) {
+      figma.ui.postMessage({ type: 'notice', text: 'Pilih minimal satu layer di kanvas.' });
+      return;
+    }
+    ctx.page = figma.currentPage.name;
+    ctx.pageNames.push(ctx.page);
+    for (const node of roots) await walk(node, ctx, null);
+  } else {
+    let pages;
+    if (msg.scope === 'all') {
+      await figma.loadAllPagesAsync();
+      pages = figma.root.children;
+    } else {
+      pages = [figma.currentPage];
+    }
+    for (const page of pages) {
+      ctx.page = page.name;
+      ctx.pageNames.push(page.name);
+      for (const child of page.children) await walk(child, ctx, null);
+    }
   }
 
   const score = computeScore(cats, rules.weights);
+  const tokenCoverage = tokenCoveragePercent(cats);
+  const variableUsage = variableUsageSummary(reg, ctx.usedVariableIds);
+  const modeLintIssues = await auditLocalVariableModes();
+  const variableCatalog = buildVariableCatalog(reg);
   const fileName = figma.root.name;
   const fileCategory = inferFileCategory(fileName);
   const data = {
@@ -570,7 +858,10 @@ async function runAudit(msg) {
     pagesScanned: ctx.pageNames,
     nodeCount: ctx.count,
     hiddenSkipped: ctx.hidden,
+    noTokensSkipped: ctx.noTokensSkipped,
     unresolvedInstances: ctx.unresolved,
+    modeLintIssues,
+    variableCatalog,
     registrySummary: {
       colorVariables: reg.colorVariables.length,
       spacingVariables: reg.spacingVariables.length,
@@ -581,6 +872,8 @@ async function runAudit(msg) {
     notes: reg.notes,
     categories: cats,
     score,
+    tokenCoverage,
+    variableUsage,
     status: statusOf(score, rules.thresholds),
     violations: ctx.violations
   };
@@ -619,7 +912,17 @@ async function applyChanges(items) {
       const node = await figma.getNodeByIdAsync(it.id);
       if (!node) { skipped++; continue; }
 
-      if (it.category === 'COLOR' && Array.isArray(node.fills)) {
+      if (it.category === 'COLOR' && it.field === 'strokes' && Array.isArray(node.strokes)) {
+        const v = await resolveVariable(it);
+        if (!v) { skipped++; continue; }
+        changes.push({ nodeId: node.id, kind: 'strokes', prev: clone(node.strokes) });
+        node.strokes = node.strokes.map((p) => (
+          p.type === 'SOLID' && p.visible !== false && toHex(p.color) === it.currentValue
+            ? figma.variables.setBoundVariableForPaint(p, 'color', v)
+            : p
+        ));
+        applied++;
+      } else if (it.category === 'COLOR' && (!it.field || it.field === 'fills') && Array.isArray(node.fills)) {
         const v = await resolveVariable(it);
         if (!v) { skipped++; continue; }
         changes.push({ nodeId: node.id, kind: 'fills', prev: clone(node.fills) });
@@ -666,6 +969,8 @@ async function undoChanges(log) {
       if (!node) continue;
       if (c.kind === 'fills') {
         node.fills = c.prev;
+      } else if (c.kind === 'strokes') {
+        node.strokes = c.prev;
       } else if (c.kind === 'field') {
         node[c.field] = c.prev;
       } else if (c.kind === 'textStyle') {
@@ -749,13 +1054,192 @@ async function annotate(violations) {
 // ---------- Seleksi ----------
 
 async function selectNode(id) {
-  const node = await figma.getNodeByIdAsync(id);
-  if (!node) return;
-  let p = node;
+  await selectNodes([id]);
+}
+
+function unbindPaintArray(paints) {
+  if (!Array.isArray(paints)) return paints;
+  return paints.map((p) => {
+    if (p && p.type === 'SOLID') {
+      try {
+        return figma.variables.setBoundVariableForPaint(p, 'color', null);
+      } catch (e) { return p; }
+    }
+    return p;
+  });
+}
+
+async function detachVariablesOnNode(node) {
+  let detached = 0;
+  const bv = node.boundVariables;
+  if (!bv) return 0;
+  for (const field of Object.keys(bv)) {
+    try {
+      if (field === 'fills' && 'fills' in node && Array.isArray(node.fills)) {
+        node.fills = unbindPaintArray(node.fills);
+        detached++;
+      } else if (field === 'strokes' && 'strokes' in node && Array.isArray(node.strokes)) {
+        node.strokes = unbindPaintArray(node.strokes);
+        detached++;
+      } else if (field in node && typeof node.setBoundVariable === 'function') {
+        node.setBoundVariable(field, null);
+        detached++;
+      }
+    } catch (e) { /* lewati field */ }
+  }
+  return detached;
+}
+
+async function walkDetach(node, tally) {
+  if (await componentHasNoTokens(node)) return;
+  tally.fields += await detachVariablesOnNode(node);
+  tally.nodes++;
+  if ('children' in node && node.type !== 'INSTANCE') {
+    for (const child of node.children) await walkDetach(child, tally);
+  }
+}
+
+async function detachVariables(scope) {
+  let roots = [];
+  if (scope === 'selection') {
+    roots = figma.currentPage.selection.slice();
+    if (roots.length === 0) {
+      figma.ui.postMessage({ type: 'notice', text: 'Pilih layer untuk detach variabel.' });
+      return;
+    }
+  } else if (scope === 'page') {
+    roots = figma.currentPage.children.slice();
+  } else {
+    await figma.loadAllPagesAsync();
+    for (const page of figma.root.children) {
+      for (const child of page.children) roots.push(child);
+    }
+  }
+  const tally = { nodes: 0, fields: 0 };
+  for (const root of roots) await walkDetach(root, tally);
+  figma.ui.postMessage({
+    type: 'notice',
+    text: `Detach selesai: ${tally.fields} bind pada ${tally.nodes} node.`
+  });
+}
+
+async function resolveVarByKey(key) {
+  if (!key) return null;
+  try {
+    return await figma.variables.importVariableByKeyAsync(key);
+  } catch (e) {
+    return null;
+  }
+}
+
+async function rebindNodeVariables(node, fromId, toVar) {
+  let n = 0;
+  try {
+    if (Array.isArray(node.fills)) {
+      let touched = false;
+      node.fills = node.fills.map((p) => {
+        if (p.type !== 'SOLID') return p;
+        const bound = figma.variables.getBoundVariable(p, 'color');
+        if (bound && bound.id === fromId) {
+          touched = true;
+          return figma.variables.setBoundVariableForPaint(p, 'color', toVar);
+        }
+        return p;
+      });
+      if (touched) n++;
+    }
+    if (Array.isArray(node.strokes)) {
+      let touched = false;
+      node.strokes = node.strokes.map((p) => {
+        if (p.type !== 'SOLID') return p;
+        const bound = figma.variables.getBoundVariable(p, 'color');
+        if (bound && bound.id === fromId) {
+          touched = true;
+          return figma.variables.setBoundVariableForPaint(p, 'color', toVar);
+        }
+        return p;
+      });
+      if (touched) n++;
+    }
+  } catch (e) { /* lewati paint */ }
+  const bv = node.boundVariables;
+  if (!bv) return n;
+  for (const field of Object.keys(bv)) {
+    if (field === 'fills' || field === 'strokes') continue;
+    const entries = bv[field];
+    const list = Array.isArray(entries) ? entries : [entries];
+    if (!list.some((e) => e && e.id === fromId)) continue;
+    try {
+      if (field in node) {
+        node.setBoundVariable(field, toVar);
+        n++;
+      }
+    } catch (e) { /* lewati */ }
+  }
+  return n;
+}
+
+async function walkRemap(node, fromId, toVar, tally) {
+  if (await componentHasNoTokens(node)) return;
+  tally.fields += await rebindNodeVariables(node, fromId, toVar);
+  if ('children' in node && node.type !== 'INSTANCE') {
+    for (const child of node.children) await walkRemap(child, fromId, toVar, tally);
+  }
+}
+
+async function remapVariable(scope, fromKey, toKey) {
+  if (!fromKey || !toKey || fromKey === toKey) {
+    figma.ui.postMessage({ type: 'notice', text: 'Pilih variabel asal dan tujuan yang berbeda.' });
+    return;
+  }
+  const fromVar = await resolveVarByKey(fromKey);
+  const toVar = await resolveVarByKey(toKey);
+  if (!fromVar || !toVar) {
+    figma.ui.postMessage({ type: 'notice', text: 'Variabel tidak ditemukan. Muat ulang daftar variabel.' });
+    return;
+  }
+  if (fromVar.resolvedType !== toVar.resolvedType) {
+    figma.ui.postMessage({ type: 'notice', text: 'Tipe variabel asal dan tujuan harus sama.' });
+    return;
+  }
+  let roots = [];
+  if (scope === 'selection') {
+    roots = figma.currentPage.selection.slice();
+    if (roots.length === 0) {
+      figma.ui.postMessage({ type: 'notice', text: 'Pilih layer untuk remap.' });
+      return;
+    }
+  } else {
+    roots = figma.currentPage.children.slice();
+  }
+  const tally = { fields: 0 };
+  for (const root of roots) await walkRemap(root, fromVar.id, toVar, tally);
+  figma.ui.postMessage({
+    type: 'notice',
+    text: `Remap ${fromVar.name} → ${toVar.name}: ${tally.fields} bind diperbarui.`
+  });
+}
+
+async function loadVariableCatalog() {
+  const reg = await buildRegistry();
+  figma.ui.postMessage({
+    type: 'variable-catalog',
+    catalog: buildVariableCatalog(reg)
+  });
+}
+
+async function selectNodes(ids) {
+  const nodes = [];
+  for (const id of ids) {
+    const node = await figma.getNodeByIdAsync(id);
+    if (node) nodes.push(node);
+  }
+  if (nodes.length === 0) return;
+  let p = nodes[0];
   while (p && p.type !== 'PAGE') p = p.parent;
   if (p && p.id !== figma.currentPage.id) await figma.setCurrentPageAsync(p);
-  figma.currentPage.selection = [node];
-  figma.viewport.scrollAndZoomIntoView([node]);
+  figma.currentPage.selection = nodes;
+  figma.viewport.scrollAndZoomIntoView(nodes);
 }
 
 // ---------- Router ----------
@@ -768,6 +1252,11 @@ figma.ui.onmessage = async (msg) => {
     else if (msg.type === 'annotate') await annotate(msg.violations || []);
     else if (msg.type === 'clear-annotations') await clearAnnotations();
     else if (msg.type === 'select') await selectNode(msg.nodeId);
+    else if (msg.type === 'select-many') await selectNodes(msg.nodeIds || []);
+    else if (msg.type === 'resize-ui') figma.ui.resize(msg.width || 420, msg.height || 760);
+    else if (msg.type === 'detach-variables') await detachVariables(msg.scope || 'selection');
+    else if (msg.type === 'remap-variable') await remapVariable(msg.scope || 'selection', msg.fromKey, msg.toKey);
+    else if (msg.type === 'load-variable-catalog') await loadVariableCatalog();
     else if (msg.type === 'close') figma.closePlugin();
   } catch (e) {
     figma.ui.postMessage({ type: 'notice', text: 'Gagal: ' + (e && e.message ? e.message : String(e)) });

@@ -23,13 +23,20 @@ aggregate.js                        — opsional/dev; tidak dipakai alur plugin
 3. Pastikan `"id"` di manifest sesuai plugin development Figma Anda.
 4. Di file yang diaudit: aktifkan library DS (Assets → Libraries).
 
+**Ikon brand di bar atas Figma (bukan di dalam panel):** upload [`../icon.png`](../icon.png) saat **Publish plugin** (org privat SawitPRO). Panduan: [`../docs/agent/figma-plugin-icon-publish.md`](../docs/agent/figma-plugin-icon-publish.md).
+
 ## Alur harian
 
 1. Buka file Figma (sprint, Species Master, DS, produk, platform, …).
-2. Jalankan plugin → **AUDIT FILE**.
+2. Tab **Audit** → pilih cakupan **Seleksi / Halaman / Semua**.
 3. Konteks file otomatis dari nama file; penanggung jawab opsional.
-4. **Jalankan audit** — hasil di panel (skor, filter, klik baris → fokus layer).
-5. **APPLY & ANNOTATE:** terapkan EXACT, **Pulihkan perubahan terakhir** (tanpa file), buat/hapus anotasi di halaman `🔍 DS Audit`.
+4. **Jalankan audit** — skor, bar coverage token, stat variabel, filter, **kelompokkan ×N**, klik baris → fokus layer (multi-select jika grup).
+5. Tab **Apply:** terapkan EXACT, pulihkan, anotasi halaman `🔍 DS Audit`.
+6. Tab **Tools:** detach variabel (seleksi/halaman), remap token A→B pada seleksi, muat katalog variabel dari library.
+
+**`[no-tokens]`** di deskripsi komponen → instance + subtree dilewati (sama seperti Variables audit).
+
+Perbandingan Community: [`../docs/agent/community-linter-comparison.md`](../docs/agent/community-linter-comparison.md).
 
 ## Skor
 

@@ -1,13 +1,14 @@
 {
-  "schemaVersion": "2.0",
+  "schemaVersion": "2.1",
   "_catatan": "Tidak ada data token di sini. Token ditemukan otomatis dari file dan library yang di-enable.",
   "weights": {
-    "AUTO_LAYOUT": 20,
-    "TYPOGRAPHY": 20,
-    "COLOR": 20,
-    "SPACING": 15,
-    "COMPONENT": 20,
-    "NAMING": 5
+    "AUTO_LAYOUT": 18,
+    "TYPOGRAPHY": 18,
+    "COLOR": 18,
+    "SPACING": 14,
+    "COMPONENT": 18,
+    "NAMING": 4,
+    "VARIABLE": 10
   },
   "thresholds": { "excellent": 90, "warning": 75 },
   "nearMatchDeltaE": 2.0,
@@ -17,5 +18,6 @@
     "text": "^Text\\/(Header|Body|Caption|Label)$",
     "icon": "^Icon\\/[A-Za-z0-9-]+$",
     "surface": "^Surface\\/[A-Za-z0-9-]+$"
-  }
+  },
+  "noTokensTag": "[no-tokens]"
 }
