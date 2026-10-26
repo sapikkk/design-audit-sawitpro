@@ -713,7 +713,8 @@
         h.style.display = '';
         h.textContent = `Token siap (${m.tokenCount}) — audit lebih cepat`;
       } else if (m.status === 'error') {
-        h.style.display = 'none';
+        h.style.display = '';
+        h.textContent = m.message ? `Token gagal: ${m.message}` : 'Token background gagal';
       }
     } else if (m.type === 'boot-hints') {
       const w = $('libraryWarn');
@@ -750,7 +751,10 @@
       setUndoAvailable(!!lastUndoLog);
       notice(`Diterapkan ${m.applied}, dilewati ${m.skipped}.`);
     } else if (m.type === 'variable-catalog') fillCatalogSelects(m.catalog);
-    else if (m.type === 'notice') {
+    else if (m.type === 'audit-abort') {
+      $('runBtn').disabled = false;
+      $('progress').textContent = '';
+    } else if (m.type === 'notice') {
       $('runBtn').disabled = false;
       if (m.text && m.text.includes('Pilih minimal')) $('progress').textContent = '';
       notice(m.text);

@@ -165,6 +165,7 @@ let registryCacheKey = '';
 let registryTokenCache = null;
 let registryTokenCacheKey = '';
 let registryWarmupPromise = null;
+let registryBuildInFlight = null;
 
 function registryFileKey() {
   return `${figma.fileKey || ''}|${figma.root.name}`;
@@ -172,7 +173,7 @@ function registryFileKey() {
 
 /** Koleksi variabel DS — prioritas import (Spacing/Radius sering di file terpisah). */
 function libraryCollectionPriority(lc) {
-  const label = `${lc.libraryName} ${lc.name}`.toLowerCase();
+  const label = `${lc.libraryName || ''} ${lc.name || ''}`.toLowerCase();
   if (/ds\s*3\.0|design.system|3\.0.*color|color.*3\.0/.test(label)) return 0;
   if (/color|semantic|brand|token/.test(label)) return 1;
   if (/spacing|radius|size|dimension/.test(label)) return 2;
@@ -219,36 +220,7 @@ function cloneRegistryTokens(src) {
   return JSON.parse(JSON.stringify(src));
 }
 
-async function buildRegistry(opts) {
-  const options = opts || {};
-  const scope = options.scope || 'page';
-  const force = options.force === true;
-  const silent = options.silent === true;
-  const fileKey = registryFileKey();
-  const cacheKey = `${fileKey}|${scope}`;
-  if (force) {
-    registryTokenCache = null;
-    registryTokenCacheKey = '';
-    registryCache = null;
-    registryCacheKey = '';
-  }
-  if (!force && registryCache && registryCacheKey === cacheKey) {
-    await registryProgress(1, 1, 'cache', silent);
-    return registryCache;
-  }
-  if (!force && registryTokenCache && registryTokenCacheKey === fileKey) {
-    const comps = await buildComponentIndex(scope);
-    const reg = {
-      ...cloneRegistryTokens(registryTokenCache),
-      ...comps,
-      builtAt: new Date().toISOString()
-    };
-    registryCache = reg;
-    registryCacheKey = cacheKey;
-    await registryProgress(1, 1, 'cache', silent);
-    return reg;
-  }
-
+async function buildRegistryUncached(scope, silent) {
   const reg = {
     schemaVersion: '1.1',
     builtAt: new Date().toISOString(),
@@ -265,16 +237,19 @@ async function buildRegistry(opts) {
   const seen = new Set();
 
   async function addVar(v, origin) {
+    if (!v || !v.key) return;
     if (seen.has(v.key)) return;
     seen.add(v.key);
-    const val = await resolveValue(v);
-    const base = { name: v.name, key: v.key, id: v.id, origin };
-    if (v.resolvedType === 'COLOR' && val && typeof val === 'object' && 'r' in val) {
-      reg.colorVariables.push({ ...base, hex: toHex(val) });
-    } else if (v.resolvedType === 'FLOAT' && typeof val === 'number') {
-      if (RADIUS_NAME.test(v.name)) reg.radiusVariables.push({ ...base, px: val });
-      else if (SPACING_NAME.test(v.name)) reg.spacingVariables.push({ ...base, px: val });
-    }
+    try {
+      const val = await resolveValue(v);
+      const base = { name: v.name, key: v.key, id: v.id, origin };
+      if (v.resolvedType === 'COLOR' && val && typeof val === 'object' && 'r' in val) {
+        reg.colorVariables.push({ ...base, hex: toHex(val) });
+      } else if (v.resolvedType === 'FLOAT' && typeof val === 'number') {
+        if (RADIUS_NAME.test(v.name)) reg.radiusVariables.push({ ...base, px: val });
+        else if (SPACING_NAME.test(v.name)) reg.spacingVariables.push({ ...base, px: val });
+      }
+    } catch (e) { /* variabel rusak / alias putus */ }
   }
 
   await registryProgress(0, 0, 'local', silent);
@@ -299,7 +274,7 @@ async function buildRegistry(opts) {
       continue;
     }
     for (const lv of items) {
-      if (shouldImportLibraryMeta(lv)) importQueue.push(lv);
+      if (lv && lv.key && shouldImportLibraryMeta(lv)) importQueue.push(lv);
     }
   }
 
@@ -307,6 +282,7 @@ async function buildRegistry(opts) {
   let loadedLib = 0;
   for (const lv of importQueue) {
     loadedLib++;
+    if (loadedLib % 12 === 0) await sleep();
     if (loadedLib === 1 || loadedLib % 60 === 0 || loadedLib === totalLib) {
       await registryProgress(loadedLib, totalLib, 'library', silent);
     }
@@ -343,24 +319,85 @@ async function buildRegistry(opts) {
   ].map((v) => ({ name: v.name, key: v.key, id: v.id, kind: v.hex ? 'COLOR' : 'FLOAT' }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  const { componentKeys, componentNames, ...tokenPart } = reg;
-  registryTokenCache = cloneRegistryTokens(tokenPart);
-  registryTokenCacheKey = fileKey;
+  return reg;
+}
+
+async function registryFromTokenCache(scope, fileKey, cacheKey, silent) {
+  const comps = await buildComponentIndex(scope);
+  const reg = {
+    ...cloneRegistryTokens(registryTokenCache),
+    ...comps,
+    builtAt: new Date().toISOString()
+  };
   registryCache = reg;
   registryCacheKey = cacheKey;
+  await registryProgress(1, 1, 'cache', silent);
   return reg;
+}
+
+async function buildRegistry(opts) {
+  const options = opts || {};
+  const scope = options.scope || 'page';
+  const force = options.force === true;
+  const silent = options.silent === true;
+  const fileKey = registryFileKey();
+  const cacheKey = `${fileKey}|${scope}`;
+
+  if (force) {
+    registryTokenCache = null;
+    registryTokenCacheKey = '';
+    registryCache = null;
+    registryCacheKey = '';
+  }
+
+  if (!force && registryCache && registryCacheKey === cacheKey) {
+    await registryProgress(1, 1, 'cache', silent);
+    return registryCache;
+  }
+  if (!force && registryTokenCache && registryTokenCacheKey === fileKey) {
+    return registryFromTokenCache(scope, fileKey, cacheKey, silent);
+  }
+
+  if (registryBuildInFlight) {
+    await registryBuildInFlight.catch(() => {});
+    if (!force && registryCache && registryCacheKey === cacheKey) return registryCache;
+    if (!force && registryTokenCache && registryTokenCacheKey === fileKey) {
+      return registryFromTokenCache(scope, fileKey, cacheKey, silent);
+    }
+  }
+
+  const job = (async () => {
+    const reg = await buildRegistryUncached(scope, silent);
+    const { componentKeys, componentNames, ...tokenPart } = reg;
+    registryTokenCache = cloneRegistryTokens(tokenPart);
+    registryTokenCacheKey = fileKey;
+    registryCache = reg;
+    registryCacheKey = cacheKey;
+    return reg;
+  })();
+  registryBuildInFlight = job;
+  try {
+    return await job;
+  } finally {
+    if (registryBuildInFlight === job) registryBuildInFlight = null;
+  }
 }
 
 function warmRegistryInBackground() {
   if (registryWarmupPromise) return registryWarmupPromise;
   registryWarmupPromise = (async () => {
     try {
+      await sleep();
       figma.ui.postMessage({ type: 'registry-warmup', status: 'started' });
       const reg = await buildRegistry({ scope: 'page', silent: true });
       const n = reg.colorVariables.length + reg.spacingVariables.length + reg.radiusVariables.length;
       figma.ui.postMessage({ type: 'registry-warmup', status: 'ready', tokenCount: n });
     } catch (e) {
-      figma.ui.postMessage({ type: 'registry-warmup', status: 'error' });
+      figma.ui.postMessage({
+        type: 'registry-warmup',
+        status: 'error',
+        message: e && e.message ? e.message : String(e)
+      });
     } finally {
       registryWarmupPromise = null;
     }
@@ -486,7 +523,12 @@ async function bootUi() {
   });
   warmRegistryInBackground();
 }
-bootUi();
+bootUi().catch((e) => {
+  figma.ui.postMessage({
+    type: 'notice',
+    text: 'Gagal memuat plugin: ' + (e && e.message ? e.message : String(e))
+  });
+});
 
 // ---------- Pencocokan nilai ----------
 
@@ -941,6 +983,18 @@ function variableUsageSummary(reg, usedVariableIds) {
 }
 
 async function runAudit(msg) {
+  try {
+    await runAuditInner(msg);
+  } catch (e) {
+    figma.ui.postMessage({
+      type: 'notice',
+      text: 'Audit gagal: ' + (e && e.message ? e.message : String(e))
+    });
+    figma.ui.postMessage({ type: 'audit-abort' });
+  }
+}
+
+async function runAuditInner(msg) {
   figma.ui.postMessage({ type: 'progress', done: 0, phase: 'registry' });
   const rules = AUDIT_RULES;
   const reg = await buildRegistry({ scope: msg.scope || 'page', force: msg.refreshRegistry === true });
@@ -957,6 +1011,7 @@ async function runAudit(msg) {
     const roots = figma.currentPage.selection.slice();
     if (roots.length === 0) {
       figma.ui.postMessage({ type: 'notice', text: 'Pilih minimal satu layer di kanvas.' });
+      figma.ui.postMessage({ type: 'audit-abort' });
       return;
     }
     ctx.page = figma.currentPage.name;
@@ -1397,5 +1452,6 @@ figma.ui.onmessage = async (msg) => {
     else if (msg.type === 'close') figma.closePlugin();
   } catch (e) {
     figma.ui.postMessage({ type: 'notice', text: 'Gagal: ' + (e && e.message ? e.message : String(e)) });
+    figma.ui.postMessage({ type: 'audit-abort' });
   }
 };
