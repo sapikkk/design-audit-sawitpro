@@ -14,16 +14,18 @@ Dokumen ini untuk agent Cursor (CLAUDE.md / rules) saat mengubah plugin audit at
 
 ### Nama variabel UI (DS 3.0)
 
-| Token UI | Variabel Figma |
-|----------|----------------|
-| `--brand` | `Brand/primary` atau `Primary/greenBright-500` |
-| `--brand-secondary` | `Brand/Secondary` |
-| `--bg` | `Primary/greenBright-50` |
-| `--surface` | `Neutral/Neutral-0` |
-| `--border` | `Primary/greenBright-200` |
-| `--text` / muted / subtle | `TextIcon/Black/primary` · `secondary` · `tertiary` |
-| `--header` | `Primary/greenBright-800` |
-| `--danger` / `--warning` | `Utility/Danger` · `Utility/Warning` |
+| Token UI | Variabel Figma | Hex (resolve 2026-10-26) |
+|----------|----------------|--------------------------|
+| `--brand` / `--header` | `Brand/primary` · `Primary/greenBright-800` | `#007200` |
+| `--primary` / tombol | `Primary/greenBright-500` | `#19A80B` |
+| `--btn-hover` | `Primary/greenBright-600` | `#009F0C` |
+| `--brand-secondary` | `Brand/Secondary` | `#E5BE02` |
+| `--background` | `Primary/greenBright-50` | `#E5F3E6` |
+| `--card` / surface | `Neutral/Neutral-0` | `#FFFFFF` |
+| `--border` | `Primary/greenBright-200` | `#AEE0AF` |
+| `--foreground` | `TextIcon/Black/primary` | `#1F1F1F` |
+| muted / subtle | `TextIcon/Black/secondary` · `tertiary` | `#404040` · `#7A7A7A` |
+| `--danger` / `--warning` | `Utility/Danger` · `Utility/Warning` | `#AB0000` · `#A04200` |
 
 **Transformasi:** Tidak ada Style Dictionary di repo. Plugin resolve alias variabel lewat `resolveValue()` (sama seperti audit).
 
@@ -127,4 +129,4 @@ assets/                → brand raster
 - [ ] Reload plugin development setelah ubah `ui.html` / `code.js`
 - [ ] Tidak menambah upload/download JSON di UI
 
-Terakhir diperbarui: 2026-10-26.
+Terakhir diperbarui: 2026-10-26 (token hex diukur MCP dari PRODUCT-DESIGN-INTERN-PLATFORM).

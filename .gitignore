@@ -6,6 +6,7 @@ node_modules
 out/
 dist/
 /code.js
+.DS_Store
 
 # Hasil audit (generate lokal)
 exports/

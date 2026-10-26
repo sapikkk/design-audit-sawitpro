@@ -6,26 +6,28 @@
 <style>
   /* shadcn-inspired tokens + SawitPRO DS overrides via applyTheme() */
   :root {
-    --background: #f8faf9;
-    --foreground: #1a1a1a;
-    --card: #ffffff;
-    --card-foreground: #1a1a1a;
-    --primary: #079455;
-    --primary-foreground: #ffffff;
-    --secondary: #ecfdf3;
-    --secondary-foreground: #05603a;
-    --muted: #f3f4f6;
-    --muted-foreground: #5c5c5c;
-    --accent: #f5b301;
-    --destructive: #d92d20;
-    --border: #e5e7eb;
-    --input: #e5e7eb;
-    --ring: #079455;
-    --radius: 0.5rem;
-    --brand: var(--primary);
-    --brand-secondary: var(--accent);
-    --header: #05603a;
-    --warning: #f79009;
+    --background: #E5F3E6;
+    --foreground: #1F1F1F;
+    --card: #FFFFFF;
+    --card-foreground: #1F1F1F;
+    --primary: #19A80B;
+    --primary-foreground: #F7F7F8;
+    --secondary: #E5F3E6;
+    --secondary-foreground: #007200;
+    --muted: #E5F3E6;
+    --muted-foreground: #404040;
+    --accent: #E5BE02;
+    --destructive: #AB0000;
+    --border: #AEE0AF;
+    --input: #AEE0AF;
+    --ring: #19A80B;
+    --radius: 8px;
+    --brand: #007200;
+    --brand-secondary: #E5BE02;
+    --header: #007200;
+    --warning: #A04200;
+    --btn-hover: #009F0C;
+    --text-subtle: #7A7A7A;
   }
 
   * { box-sizing: border-box; }
@@ -46,8 +48,8 @@
     align-items: center;
     gap: 8px;
     padding: 8px 12px;
-    background: #1a1a1a;
-    color: #fff;
+    background: var(--header);
+    color: var(--primary-foreground);
     border-bottom: 3px solid var(--brand-secondary);
     font-size: 10px;
     font-weight: 700;
@@ -179,7 +181,7 @@
     cursor: pointer;
   }
   .btn-primary { background: var(--primary); color: var(--primary-foreground); }
-  .btn-primary:hover { filter: brightness(0.95); }
+  .btn-primary:hover { background: var(--btn-hover); }
   .btn-secondary { background: var(--card); color: var(--foreground); border: 1px solid var(--border); }
   .btn-destructive { background: var(--destructive); color: #fff; }
   .btn-ghost { background: transparent; color: var(--muted-foreground); border: 1px solid transparent; padding: 4px 8px; font-size: 10px; }
@@ -314,6 +316,7 @@
 <div class="native-bridge" aria-hidden="true">
   <img src="brand-icon.png" alt="" width="20" height="20" />
   <span>Design Audit SawitPRO</span>
+  <span id="pluginVer" style="margin-left:auto;opacity:.85;font-weight:600;letter-spacing:0">v2.2.5</span>
 </div>
 
 <div class="app">
@@ -446,25 +449,28 @@
   function applyTheme(theme) {
     if (!theme) return;
     const map = {
-      brand: '--primary',
-      brandSecondary: '--accent',
+      brand: '--brand',
+      brandSecondary: '--brand-secondary',
       bg: '--background',
       surface: '--card',
       border: '--border',
       text: '--foreground',
       textMuted: '--muted-foreground',
-      textSubtle: '--muted-foreground',
+      textSubtle: '--text-subtle',
       textInverse: '--primary-foreground',
       btn: '--primary',
-      btnHover: '--primary',
+      btnHover: '--btn-hover',
       danger: '--destructive',
       warning: '--warning',
-      header: '--secondary-foreground'
+      header: '--header'
     };
     const root = document.documentElement.style;
     for (const [k, cssVar] of Object.entries(map)) {
       if (theme[k]) root.setProperty(cssVar, theme[k]);
     }
+    if (theme.header) root.setProperty('--secondary-foreground', theme.header);
+    if (theme.border) root.setProperty('--input', theme.border);
+    if (theme.btn) root.setProperty('--ring', theme.btn);
     $('themeHint').textContent =
       theme.source === 'ds-3.0-color' ? 'DS 3.0 Color'
         : theme.source === 'ds-3.0-color-partial' ? 'DS 3.0 (sebagian)'
@@ -701,8 +707,10 @@
   syncUiSize();
 
   window.onmessage = (ev) => {
+    try {
     const m = ev.data && ev.data.pluginMessage;
     if (!m) return;
+    if (m.pluginVersion) $('pluginVer').textContent = 'v' + m.pluginVersion;
     if (m.type === 'theme') applyTheme(m.theme);
     else if (m.type === 'registry-warmup') {
       const h = $('warmupHint');
@@ -758,6 +766,9 @@
       $('runBtn').disabled = false;
       if (m.text && m.text.includes('Pilih minimal')) $('progress').textContent = '';
       notice(m.text);
+    }
+    } catch (err) {
+      notice('UI: ' + (err && err.message ? err.message : String(err)));
     }
   };
 </script>

@@ -38,6 +38,16 @@ done
 
 node --check "$ROOT/prompt/code.js"
 echo "  OK  prompt/code.js (syntax)"
+
+if grep -E '^[[:space:]]*import[[:space:]]|^[[:space:]]*export[[:space:]]' "$ROOT/prompt/code.js" >/dev/null; then
+  echo "ERROR: ES import/export di prompt/code.js — sandbox Figma menolak."
+  exit 1
+fi
+if ! grep -q "PLUGIN_VERSION = '2.2.5'" "$ROOT/prompt/code.js"; then
+  echo "ERROR: PLUGIN_VERSION 2.2.5 tidak ada di code.js"
+  exit 1
+fi
+echo "  OK  no ESM import + version 2.2.5"
 echo ""
 
 if [[ -f "$ROOT/code.js" ]]; then

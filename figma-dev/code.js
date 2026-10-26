@@ -53,11 +53,12 @@ const FILE_CATEGORY_LABEL = {
   OTHER: 'Lainnya'
 };
 
-figma.showUI(__html__, { width: 420, height: 760, themeColors: true });
-figma.notify('DESIGN AUDIT SawitPRO — panel siap', { timeout: 2500 });
+const PLUGIN_VERSION = '2.2.5';
 
 /** Aturan audit (sumber: rules.json di repo — disematkan, tanpa upload file). */
 const AUDIT_RULES = {
+  schemaVersion: '2.1',
+  noTokensTag: '[no-tokens]',
   weights: {
     AUTO_LAYOUT: 18,
     TYPOGRAPHY: 18,
@@ -406,22 +407,22 @@ function warmRegistryInBackground() {
   return registryWarmupPromise;
 }
 
-/** Tema UI dari library **1. DS 3.0: Color** (Semantic + Global Token). */
+/** Tema UI dari library **1. DS 3.0: Color** (hex diukur MCP 2026-10-26 dari file intern). */
 const UI_THEME_FALLBACK = {
-  brand: '#079455',
-  brandSecondary: '#F5B301',
-  bg: '#F3FAF6',
+  brand: '#007200',
+  brandSecondary: '#E5BE02',
+  bg: '#E5F3E6',
   surface: '#FFFFFF',
-  border: '#B9E6CE',
-  text: '#1A1A1A',
-  textMuted: '#5C5C5C',
-  textSubtle: '#8C8C8C',
-  textInverse: '#FFFFFF',
-  btn: '#079455',
-  btnHover: '#067647',
-  danger: '#D92D20',
-  warning: '#F79009',
-  header: '#05603A',
+  border: '#AEE0AF',
+  text: '#1F1F1F',
+  textMuted: '#404040',
+  textSubtle: '#7A7A7A',
+  textInverse: '#F7F7F8',
+  btn: '#19A80B',
+  btnHover: '#009F0C',
+  danger: '#AB0000',
+  warning: '#A04200',
+  header: '#007200',
   source: 'fallback'
 };
 
@@ -499,37 +500,44 @@ async function buildUiTheme() {
 }
 
 async function bootUi() {
-  const cat = inferFileCategory(figma.root.name);
-  figma.ui.postMessage({
-    type: 'file-context',
-    fileName: figma.root.name,
-    fileKey: figma.fileKey || '',
-    fileCategory: cat,
-    fileCategoryLabel: FILE_CATEGORY_LABEL[cat] || cat
-  });
   try {
-    figma.ui.postMessage({ type: 'theme', theme: await buildUiTheme() });
+    const cat = inferFileCategory(figma.root.name);
+    figma.ui.postMessage({
+      type: 'file-context',
+      pluginVersion: PLUGIN_VERSION,
+      fileName: figma.root.name,
+      fileKey: figma.fileKey || '',
+      fileCategory: cat,
+      fileCategoryLabel: FILE_CATEGORY_LABEL[cat] || cat
+    });
+    try {
+      figma.ui.postMessage({ type: 'theme', theme: await buildUiTheme() });
+    } catch (e) {
+      figma.ui.postMessage({ type: 'theme', theme: UI_THEME_FALLBACK });
+    }
+    let libraryCollectionCount = 0;
+    try {
+      const cols = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
+      libraryCollectionCount = cols.length;
+    } catch (e) { /* teamlibrary */ }
+    figma.ui.postMessage({
+      type: 'boot-hints',
+      pluginVersion: PLUGIN_VERSION,
+      libraryCollectionCount,
+      selectionCount: figma.currentPage.selection.length
+    });
+    warmRegistryInBackground();
   } catch (e) {
-    figma.ui.postMessage({ type: 'theme', theme: UI_THEME_FALLBACK });
+    figma.ui.postMessage({
+      type: 'notice',
+      text: 'Gagal memuat plugin: ' + (e && e.message ? e.message : String(e))
+    });
   }
-  let libraryCollectionCount = 0;
-  try {
-    const cols = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
-    libraryCollectionCount = cols.length;
-  } catch (e) { /* teamlibrary */ }
-  figma.ui.postMessage({
-    type: 'boot-hints',
-    libraryCollectionCount,
-    selectionCount: figma.currentPage.selection.length
-  });
-  warmRegistryInBackground();
 }
-bootUi().catch((e) => {
-  figma.ui.postMessage({
-    type: 'notice',
-    text: 'Gagal memuat plugin: ' + (e && e.message ? e.message : String(e))
-  });
-});
+
+figma.showUI(__html__, { width: 420, height: 760, themeColors: true });
+figma.notify('DESIGN AUDIT SawitPRO v' + PLUGIN_VERSION + ' — panel siap', { timeout: 2800 });
+bootUi();
 
 // ---------- Pencocokan nilai ----------
 

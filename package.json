@@ -1,8 +1,8 @@
 {
   "name": "design-audit-sawitpro",
-  "version": "1.0.0",
+  "version": "2.2.5",
   "description": "DESIGN AUDIT SAWITPRO — plugin Figma audit Design System + agregat laporan",
-  "main": "code.js",
+  "main": "prompt/code.js",
   "scripts": {
     "figma:check": "bash scripts/figma-dev-check.sh",
     "figma:fix-import": "bash scripts/figma-fix-dev-import.sh",

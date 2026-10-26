@@ -1,8 +1,6 @@
-IMPORT PLUGIN FIGMA — PAKAI FILE INI SAJA
+IMPORT: pilih manifest.json di folder ini.
 
-1. Figma Desktop (disarankan): Plugins → Development → Import from manifest
-2. Pilih: manifest.json (file di folder ini, BUKAN folder prompt/, BUKAN root repo)
-3. Hapus dulu semua plugin Development lama (TypeScript / duplikat audit)
-
-Jalankan dari terminal jika file code.js kosong/tua:
+Nama plugin: DESIGN AUDIT SAWITPRO
+ID sama dengan root repo (1696532958279147641).
+Setelah edit prompt/code.js atau prompt/ui.html jalankan:
   npm run figma:bundle

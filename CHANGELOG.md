@@ -2,6 +2,15 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## [2.2.5] — 2026-10-26
+
+### Changed
+
+- Tema UI memakai hex **1. DS 3.0: Color** yang di-resolve dari file PRODUCT DESIGN INTERN PLATFORM (Brand/primary `#007200`, greenBright-500 `#19A80B`, Secondary `#E5BE02`).
+- `showUI` dipindah setelah semua konstanta (tanpa TDZ). Versi plugin tampil di header (`v2.2.5`) dan notifikasi.
+- `AUDIT_RULES` sinkron `rules.json` (`schemaVersion` 2.1). `applyTheme` menulis `--header`, `--btn-hover`, `--text-subtle`.
+- `tsc` tidak lagi menimpa `code.js` plugin (`outDir: dist`). Manifest `figma-dev` memakai ID yang sama dengan root.
+
 ## [2.2.4] — 2026-10-26
 
 ### Added

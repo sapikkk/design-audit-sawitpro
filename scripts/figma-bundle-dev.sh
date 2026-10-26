@@ -10,8 +10,8 @@ cp "$ROOT/icon.png" "$OUT/icon.png" 2>/dev/null || true
 cp "$ROOT/prompt/brand-icon.png" "$OUT/brand-icon.png" 2>/dev/null || true
 cat > "$OUT/manifest.json" << 'JSON'
 {
-  "name": "SAWITPRO DS Audit (import ini)",
-  "id": "1847293056120489012",
+  "name": "DESIGN AUDIT SAWITPRO",
+  "id": "1696532958279147641",
   "api": "1.0.0",
   "main": "code.js",
   "ui": "ui.html",
