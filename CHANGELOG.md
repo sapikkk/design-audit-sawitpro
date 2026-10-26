@@ -2,6 +2,13 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## [2.2.8] — 2026-10-27
+
+### Changed
+
+- UI putih (kanvas `#FFFFFF`), tab underline ala Figma, meta satu baris; aksen DS hanya tombol/skor/teks brand.
+- Copy dipendekkan (anti-slop). `applyTheme` tidak mengecat latar hijau dari token library.
+
 ## [2.2.7] — 2026-10-27
 
 ### Added
