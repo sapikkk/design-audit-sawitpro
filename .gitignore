@@ -5,7 +5,7 @@ node_modules
 
 out/
 dist/
-code.js
+/code.js
 
 # Hasil audit (generate lokal)
 exports/
