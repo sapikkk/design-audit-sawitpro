@@ -294,16 +294,29 @@
     display: flex;
     gap: 8px;
     align-items: flex-start;
-    padding: 10px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--card);
-    margin-bottom: 6px;
+    padding: 10px 8px 10px 12px;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    background: transparent;
+    margin: 0;
+    position: relative;
   }
+  .row::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10px;
+    bottom: 10px;
+    width: 3px;
+    border-radius: 2px;
+    background: #D9D9D9;
+  }
+  .row.sev-HIGH::before { background: var(--destructive); }
+  .row.sev-MEDIUM::before { background: var(--warning); }
+  .row.sev-LOW::before { background: #BDBDBD; }
   .row:hover { background: #FAFAFA; }
-  .row.sev-HIGH { border-left: 3px solid var(--destructive); }
-  .row.sev-MEDIUM { border-left: 3px solid var(--warning); }
-  .row.sev-LOW { border-left: 3px solid #BDBDBD; }
+  .row.exact-row { background: #FAFFFA; }
   .row .body { flex: 1; min-width: 0; cursor: pointer; }
   .row .count {
     font-size: 10px;
@@ -356,6 +369,37 @@
   }
 
   .stack { display: flex; flex-direction: column; gap: 10px; }
+
+  .tab-intro {
+    font-size: var(--font-size-xsmall);
+    color: var(--muted-foreground);
+    line-height: 1.45;
+    margin: 0;
+  }
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 12px 0 6px;
+  }
+  .action-line {
+    font-size: var(--font-size-xsmall);
+    color: var(--brand);
+    font-weight: 600;
+    margin-top: 4px;
+  }
+  .action-line.manual { color: var(--warning); font-weight: 500; }
+  .summary-block {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .apply-empty {
+    padding: 16px 0;
+    color: var(--muted-foreground);
+    font-size: var(--font-size-xsmall);
+  }
 </style>
 </head>
 <body>
@@ -381,6 +425,7 @@
 
   <div class="panel on" id="p-audit">
     <div class="panel-body">
+      <p class="tab-intro"><b>Audit</b> — scan layer di file ini, bandingkan dengan token/style DS. Klik baris temuan untuk fokus layer di kanvas.</p>
       <div class="field">
         <span class="field-label">Cakupan</span>
         <div class="segmented" id="scopeGroup">
@@ -432,10 +477,11 @@
   </div>
 
   <div class="panel" id="p-apply">
-    <div class="panel-body stack">
-      <p class="muted" style="margin:0">Centang temuan <b>EXACT</b> di tab Audit.</p>
+    <div class="panel-body">
+      <p class="tab-intro"><b>Apply</b> — perbaiki file: plugin mengikat variabel/style hanya untuk temuan <b>EXACT</b>. Temuan lain: ikuti saran token yang sudah ada di file/library (ubah manual di panel Variables).</p>
+      <div id="applyStats" class="subtle" style="margin:8px 0"></div>
       <div class="btn-row">
-        <button type="button" class="btn btn-primary" id="applySel">Terapkan terpilih</button>
+        <button type="button" class="btn btn-primary" id="applySel">Terapkan tercentang</button>
         <button type="button" class="btn btn-secondary" id="applyAll">Semua EXACT</button>
       </div>
       <div class="btn-row">
@@ -443,11 +489,16 @@
         <button type="button" class="btn btn-secondary" id="annotateBtn">Anotasi</button>
         <button type="button" class="btn btn-secondary" id="clearBtn">Hapus anotasi</button>
       </div>
+      <div class="scroll" style="margin-top:8px;flex:1">
+        <div id="applyEmpty" class="apply-empty">Jalankan audit di tab Audit.</div>
+        <div id="applyList"></div>
+      </div>
     </div>
   </div>
 
   <div class="panel" id="p-tools">
     <div class="panel-body stack">
+      <p class="tab-intro"><b>Tools</b> — operasi variabel di project: lepas bind massal (detach) atau ganti token A→B (remap). Tidak menggantikan audit; dipakai setelah review atau migrasi token.</p>
       <div class="card">
         <div class="field-label">Detach variabel</div>
         <p class="subtle" style="margin:4px 0 8px">Lepas bind variabel pada cakupan.</p>
@@ -537,6 +588,7 @@
       tab.setAttribute('aria-selected', on ? 'true' : 'false');
       $('p-' + m).classList.toggle('on', on);
     });
+    if (mode === 'apply') renderApplyList();
     if (mode === 'tools' && variableCatalog.length === 0) post({ type: 'load-variable-catalog' });
   }
   $('tab-audit').onclick = () => setTab('audit');
@@ -638,7 +690,7 @@
     const [badgeCls, badgeLabel] = statusBadge(audit.status);
 
     $('summary').innerHTML = `
-      <div class="card">
+      <div class="summary-block">
         <div class="score-row">
           <div class="score">${audit.score.toFixed(1)}%</div>
           <span class="badge ${badgeCls}">${esc(badgeLabel)}</span>
@@ -656,12 +708,130 @@
     $('listToggles').style.display = '';
     if (audit.variableCatalog) fillCatalogSelects(audit.variableCatalog);
     renderList();
+    renderApplyList();
   }
 
   function tokenNameFrom(v) {
     if (v.targetVariableName) return v.targetVariableName;
     const m = (v.suggestion || '').match(/Ikat ke (.+)|Mirip (.+?) \(/);
     return m ? (m[1] || m[2]) : '';
+  }
+
+  function nearestTokenFromSuggestion(v) {
+    const m = (v.suggestion || '').match(/Token terdekat ([^(]+)/);
+    return m ? m[1].trim() : '';
+  }
+
+  function applyActionLine(v) {
+    const name = v.targetVariableName || nearestTokenFromSuggestion(v) || tokenNameFrom(v);
+    if (v.matchType === 'EXACT') {
+      if (v.category === 'COLOR') {
+        const part = v.field === 'strokes' ? 'stroke' : 'fill';
+        return `Otomatis: ikat ${part} ke variabel «${name}».`;
+      }
+      if (v.category === 'SPACING' && v.field) {
+        return `Otomatis: ikat ${v.field} ke «${name}».`;
+      }
+      if (v.category === 'TYPOGRAPHY') {
+        return `Otomatis: terapkan text style «${name}».`;
+      }
+      return name ? `Otomatis: ikat ke «${name}».` : 'Otomatis: perbaikan EXACT.';
+    }
+    return '';
+  }
+
+  function manualGuideLine(v) {
+    const tok = nearestTokenFromSuggestion(v) || tokenNameFrom(v);
+    if (tok) {
+      return `Manual: pilih layer → Variables → bind «${tok}» (sudah ada di file/library).`;
+    }
+    if (v.category === 'AUTO_LAYOUT') return 'Manual: tambah Auto Layout di panel Design.';
+    if (v.category === 'NAMING') return 'Manual: rename layer sesuai semantic tim.';
+    if (v.category === 'COMPONENT') return 'Manual: swap ke komponen DS atau perbaiki instance.';
+    if (v.suggestion) return `Manual: ${v.suggestion}`;
+    return `Manual: ${v.issue}`;
+  }
+
+  function appendFindingRow(container, v, opts) {
+    const row = document.createElement('div');
+    row.className = 'row sev-' + v.severity + (v.matchType === 'EXACT' ? ' exact-row' : '');
+    const idx = v._index != null ? v._index : 0;
+    let check = '';
+    if (opts && opts.checkboxes && v.matchType === 'EXACT') {
+      if (v.indices && v.indices.length) {
+        check = v.indices.map((i) => `<input type="checkbox" data-i="${i}" checked>`).join('');
+      } else {
+        check = `<input type="checkbox" data-i="${idx}" checked>`;
+      }
+    }
+    const countBadge = v.count > 1 ? `<span class="count">×${v.count}</span>` : '';
+    const token = tokenNameFrom(v) || nearestTokenFromSuggestion(v);
+    const copyBtn = token
+      ? `<button type="button" class="btn btn-ghost copy-token">Salin nama token</button>`
+      : '';
+    const action = applyActionLine(v);
+    const manual = v.matchType === 'EXACT' ? '' : manualGuideLine(v);
+    row.innerHTML = `
+      ${check}
+      <div class="body" data-ids="${esc((v.ids || [v.id]).join(','))}">
+        ${countBadge}
+        <div><b>${esc(v.layerName)}</b> <span class="subtle">${esc(v.topLevelScreen || '')}</span></div>
+        <div class="muted">${esc(v.category)} · ${esc(v.severity)} · ${esc(v.matchType)}</div>
+        <div class="subtle">${esc(v.issue)}${v.currentValue ? ` · ${esc(v.currentValue)}` : ''}</div>
+        ${action ? `<div class="action-line">${esc(action)}</div>` : ''}
+        ${manual ? `<div class="action-line manual">${esc(manual)}</div>` : ''}
+        ${copyBtn}
+      </div>`;
+    container.appendChild(row);
+    const body = row.querySelector('.body');
+    body.onclick = (ev) => {
+      if (ev.target.closest('.copy-token') || ev.target.closest('input')) return;
+      const ids = body.dataset.ids.split(',').filter(Boolean);
+      post(ids.length > 1 ? { type: 'select-many', nodeIds: ids } : { type: 'select', nodeId: ids[0] });
+    };
+    const copyEl = row.querySelector('.copy-token');
+    if (copyEl && token) {
+      copyEl.onclick = (ev) => {
+        ev.stopPropagation();
+        if (navigator.clipboard) navigator.clipboard.writeText(token).then(() => notice('Disalin: ' + token));
+      };
+    }
+  }
+
+  function renderApplyList() {
+    const listEl = $('applyList');
+    const emptyEl = $('applyEmpty');
+    const statsEl = $('applyStats');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+    if (!audit || !audit.violations.length) {
+      emptyEl.style.display = 'block';
+      statsEl.textContent = '';
+      return;
+    }
+    emptyEl.style.display = 'none';
+    const exact = audit.violations.filter((v) => v.matchType === 'EXACT');
+    const manual = audit.violations.filter((v) => v.matchType !== 'EXACT');
+    statsEl.textContent = `${exact.length} EXACT (otomatis) · ${manual.length} perlu manual`;
+
+    if (exact.length) {
+      const h = document.createElement('div');
+      h.className = 'section-label';
+      h.textContent = 'Bisa diterapkan plugin';
+      listEl.appendChild(h);
+      audit.violations.forEach((v, i) => {
+        if (v.matchType === 'EXACT') appendFindingRow(listEl, { ...v, _index: i }, { checkboxes: true });
+      });
+    }
+    if (manual.length) {
+      const h2 = document.createElement('div');
+      h2.className = 'section-label';
+      h2.textContent = 'Saran token / perbaikan manual';
+      listEl.appendChild(h2);
+      audit.violations.forEach((v) => {
+        if (v.matchType !== 'EXACT') appendFindingRow(listEl, v, { checkboxes: false });
+      });
+    }
   }
 
   function renderList() {
@@ -671,45 +841,7 @@
     let items = filteredViolations();
     if ($('grouped').checked) items = groupViolations(items);
 
-    items.forEach((v) => {
-      const row = document.createElement('div');
-      row.className = 'row sev-' + v.severity;
-      const idx = v._index != null ? v._index : (v.indices ? v.indices[0] : 0);
-      const check = v.matchType === 'EXACT' && !v.count
-        ? `<input type="checkbox" data-i="${idx}">`
-        : (v.matchType === 'EXACT' && v.indices
-          ? v.indices.map((i) => `<input type="checkbox" data-i="${i}">`).join('')
-          : '');
-      const countBadge = v.count > 1 ? `<span class="count">×${v.count}</span>` : '';
-      const token = tokenNameFrom(v);
-      const copyBtn = token
-        ? `<button type="button" class="btn btn-ghost copy-token">Salin token</button>`
-        : '';
-      row.innerHTML = `
-        ${check}
-        <div class="body" data-ids="${esc((v.ids || [v.id]).join(','))}">
-          ${countBadge}
-          <div><b>${esc(v.layerName)}</b> ${v.count > 1 ? '' : `<span class="subtle">${esc(v.topLevelScreen || '')}</span>`}</div>
-          <div class="muted">${esc(v.category)} · ${esc(v.severity)} · ${esc(v.matchType)}</div>
-          <div class="subtle">${esc(v.issue)}${v.currentValue ? ` · ${esc(v.currentValue)}` : ''}</div>
-          <div class="subtle">${esc(v.suggestion || '')}</div>
-          ${copyBtn}
-        </div>`;
-      list.appendChild(row);
-      const body = row.querySelector('.body');
-      body.onclick = (ev) => {
-        if (ev.target.closest('.copy-token')) return;
-        const ids = body.dataset.ids.split(',').filter(Boolean);
-        post(ids.length > 1 ? { type: 'select-many', nodeIds: ids } : { type: 'select', nodeId: ids[0] });
-      };
-      const copyEl = row.querySelector('.copy-token');
-      if (copyEl && token) {
-        copyEl.onclick = (ev) => {
-          ev.stopPropagation();
-          if (navigator.clipboard) navigator.clipboard.writeText(token).then(() => notice('Disalin: ' + token));
-        };
-      }
-    });
+    items.forEach((v) => appendFindingRow(list, v, { checkboxes: false }));
   }
 
   $('fCat').onchange = () => audit && renderList();
@@ -719,9 +851,9 @@
 
   $('applySel').onclick = () => {
     if (!audit) { notice('Jalankan audit dulu.'); return; }
-    const items = [...document.querySelectorAll('#list input[type=checkbox]:checked')]
+    const items = [...document.querySelectorAll('#applyList input[type=checkbox]:checked')]
       .map((c) => audit.violations[Number(c.dataset.i)]);
-    if (items.length === 0) { notice('Centang EXACT dulu.'); return; }
+    if (items.length === 0) { notice('Centang EXACT di daftar Apply.'); return; }
     post({ type: 'apply', items });
   };
 

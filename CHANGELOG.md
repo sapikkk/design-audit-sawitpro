@@ -2,6 +2,13 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## [1.0.1] — 2026-10-27
+
+### Changed
+
+- Tab **Apply**: daftar temuan + baris aksi (EXACT otomatis vs manual + token terdekat di project).
+- Temuan tanpa border kartu; garis severity hanya di kiri. Intro singkat tiap tab (Audit / Apply / Tools).
+
 ## [1.0.0] — 2026-10-27
 
 ### Release
