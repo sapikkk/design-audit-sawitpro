@@ -292,32 +292,28 @@
 
   .row {
     display: flex;
+    flex-direction: column;
     gap: 8px;
-    align-items: flex-start;
-    padding: 10px 8px 10px 12px;
+    padding: 12px 0;
     border: none;
     border-bottom: 1px solid var(--border);
     border-radius: 0;
     background: transparent;
     margin: 0;
-    position: relative;
   }
-  .row::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 10px;
-    bottom: 10px;
-    width: 3px;
-    border-radius: 2px;
-    background: #D9D9D9;
-  }
-  .row.sev-HIGH::before { background: var(--destructive); }
-  .row.sev-MEDIUM::before { background: var(--warning); }
-  .row.sev-LOW::before { background: #BDBDBD; }
   .row:hover { background: #FAFAFA; }
   .row.exact-row { background: #FAFFFA; }
   .row .body { flex: 1; min-width: 0; cursor: pointer; }
+  .row .btn-fix {
+    width: 100%;
+    min-height: 36px;
+    font-size: var(--font-size-small);
+  }
+  .row .btn-fix.secondary-fix {
+    background: var(--card);
+    color: var(--brand);
+    border: 1px solid var(--border);
+  }
   .row .count {
     font-size: 10px;
     font-weight: 600;
@@ -481,11 +477,10 @@
 
   <div class="panel" id="p-apply">
     <div class="panel-body">
-      <p class="tab-intro">① Centang yang <b>plugin bisa perbaiki</b> &nbsp;→&nbsp; ② <b>Terapkan yang dicentang</b></p>
+      <p class="tab-intro">Tekan <b>Perbaiki</b> pada setiap baris. Atau <b>Perbaiki semua otomatis</b> di bawah.</p>
       <div id="applyStats" class="subtle" style="margin:8px 0"></div>
       <div class="btn-row">
-        <button type="button" class="btn btn-primary" id="applySel">Terapkan yang dicentang</button>
-        <button type="button" class="btn btn-secondary" id="applyAll">Terapkan semua (otomatis)</button>
+        <button type="button" class="btn btn-primary" id="applyAll" style="flex:1">Perbaiki semua otomatis</button>
       </div>
       <div class="btn-row">
         <button type="button" class="btn btn-secondary" id="undoBtn" disabled>Batalkan perubahan</button>
@@ -769,14 +764,9 @@
     const row = document.createElement('div');
     row.className = 'row sev-' + v.severity + (v.matchType === 'EXACT' ? ' exact-row' : '');
     const idx = v._index != null ? v._index : 0;
-    let check = '';
-    if (opts && opts.checkboxes && v.matchType === 'EXACT') {
-      if (v.indices && v.indices.length) {
-        check = v.indices.map((i) => `<input type="checkbox" data-i="${i}" checked>`).join('');
-      } else {
-        check = `<input type="checkbox" data-i="${idx}" checked>`;
-      }
-    }
+    const showFix = !opts || opts.showFix !== false;
+    const fixLabel = v.matchType === 'EXACT' ? 'Perbaiki otomatis' : 'Tunjuk layer';
+    const fixClass = v.matchType === 'EXACT' ? 'btn btn-primary btn-fix' : 'btn btn-fix secondary-fix';
     const countBadge = v.count > 1 ? `<span class="count">×${v.count}</span>` : '';
     const token = tokenNameFrom(v) || nearestTokenFromSuggestion(v);
     const copyBtn = token
@@ -785,8 +775,7 @@
     const action = applyActionLine(v);
     const manual = v.matchType === 'EXACT' ? '' : manualGuideLine(v);
     row.innerHTML = `
-      ${check}
-      <div class="body" data-ids="${esc((v.ids || [v.id]).join(','))}">
+      <div class="body" data-ids="${esc((v.ids || [v.id]).join(','))}" data-idx="${idx}">
         ${countBadge}
         <div><b>${esc(v.layerName)}</b> <span class="subtle">${esc(v.topLevelScreen || '')}</span></div>
         <div class="muted">${esc(v.category)} · ${esc(tingkatLabel(v.severity))} · ${esc(jenisPerbaikan(v))}</div>
@@ -794,14 +783,22 @@
         ${action ? `<div class="action-line">${esc(action)}</div>` : ''}
         ${manual ? `<div class="action-line manual">${esc(manual)}</div>` : ''}
         ${copyBtn}
-      </div>`;
+      </div>
+      ${showFix ? `<button type="button" class="${fixClass}">${fixLabel}</button>` : ''}`;
     container.appendChild(row);
     const body = row.querySelector('.body');
     body.onclick = (ev) => {
-      if (ev.target.closest('.copy-token') || ev.target.closest('input')) return;
+      if (ev.target.closest('.copy-token') || ev.target.closest('.btn-fix')) return;
       const ids = body.dataset.ids.split(',').filter(Boolean);
       post(ids.length > 1 ? { type: 'select-many', nodeIds: ids } : { type: 'select', nodeId: ids[0] });
     };
+    const fixBtn = row.querySelector('.btn-fix');
+    if (fixBtn) {
+      fixBtn.onclick = (ev) => {
+        ev.stopPropagation();
+        fixOneFinding(v);
+      };
+    }
     const copyEl = row.querySelector('.copy-token');
     if (copyEl && token) {
       copyEl.onclick = (ev) => {
@@ -809,6 +806,28 @@
         if (navigator.clipboard) navigator.clipboard.writeText(token).then(() => notice('Disalin: ' + token));
       };
     }
+  }
+
+  function violationItemsForApply(v) {
+    if (v.indices && v.indices.length) {
+      return v.indices.map((i) => audit.violations[i]).filter(Boolean);
+    }
+    if (v._index != null && audit.violations[v._index]) return [audit.violations[v._index]];
+    return [v];
+  }
+
+  function fixOneFinding(v) {
+    if (!audit) {
+      notice('Dulu: tab Periksa → Mulai periksa.');
+      return;
+    }
+    const ids = (v.ids || [v.id]).filter(Boolean);
+    if (v.matchType === 'EXACT') {
+      post({ type: 'apply', items: violationItemsForApply(v) });
+      return;
+    }
+    post(ids.length > 1 ? { type: 'select-many', nodeIds: ids } : { type: 'select', nodeId: ids[0] });
+    notice(manualGuideLine(v));
   }
 
   function renderApplyList() {
@@ -833,7 +852,7 @@
       h.textContent = 'Plugin perbaiki otomatis';
       listEl.appendChild(h);
       audit.violations.forEach((v, i) => {
-        if (v.matchType === 'EXACT') appendFindingRow(listEl, { ...v, _index: i }, { checkboxes: true });
+        if (v.matchType === 'EXACT') appendFindingRow(listEl, { ...v, _index: i }, { showFix: true });
       });
     }
     if (manual.length) {
@@ -841,8 +860,8 @@
       h2.className = 'section-label';
       h2.textContent = 'Anda perbaiki di Figma';
       listEl.appendChild(h2);
-      audit.violations.forEach((v) => {
-        if (v.matchType !== 'EXACT') appendFindingRow(listEl, v, { checkboxes: false });
+      audit.violations.forEach((v, i) => {
+        if (v.matchType !== 'EXACT') appendFindingRow(listEl, { ...v, _index: i }, { showFix: true });
       });
     }
   }
@@ -854,7 +873,7 @@
     let items = filteredViolations();
     if ($('grouped').checked) items = groupViolations(items);
 
-    items.forEach((v) => appendFindingRow(list, v, { checkboxes: false }));
+    items.forEach((v) => appendFindingRow(list, v, { showFix: false }));
   }
 
   $('fCat').onchange = () => audit && renderList();
@@ -862,19 +881,11 @@
   $('grouped').onchange = () => audit && renderList();
   $('rawOnly').onchange = () => audit && renderList();
 
-  $('applySel').onclick = () => {
-    if (!audit) { notice('Dulu: tab Periksa → Mulai periksa.'); return; }
-    const items = [...document.querySelectorAll('#applyList input[type=checkbox]:checked')]
-      .map((c) => audit.violations[Number(c.dataset.i)]);
-    if (items.length === 0) { notice('Centang minimal satu item.'); return; }
-    post({ type: 'apply', items });
-  };
-
   $('applyAll').onclick = () => {
     if (!audit) { notice('Dulu: tab Periksa → Mulai periksa.'); return; }
     const items = audit.violations.filter((v) => v.matchType === 'EXACT');
     if (items.length === 0) { notice('Tidak ada yang bisa otomatis.'); return; }
-    if (!confirm(`Terapkan ${items.length} perbaikan otomatis?`)) return;
+    if (!confirm(`Perbaiki otomatis ${items.length} item?`)) return;
     post({ type: 'apply', items });
   };
 

@@ -2,6 +2,16 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## [1.0.3] — 2026-10-27
+
+### Fixed
+
+- `page.loadAsync()` sebelum akses `children` (audit halaman, anotasi, detach) — hilangkan error dynamic-page.
+
+### Changed
+
+- Tab Perbaiki: tombol **Perbaiki otomatis** / **Tunjuk layer** per temuan; garis kiri kartu dihapus.
+
 ## [1.0.2] — 2026-10-27
 
 ### Changed

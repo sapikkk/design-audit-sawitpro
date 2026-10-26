@@ -1,6 +1,6 @@
-// DS Audit Pro — code.js (v1.0.0)
+// DS Audit Pro — code.js (v1.0.3)
 // Berjalan di sandbox Figma. Tidak ada LLM, tidak ada network, tidak ada token di config.
-console.log('[DESIGN AUDIT SAWITPRO] plugin v1.0.2 loaded');
+console.log('[DESIGN AUDIT SAWITPRO] plugin v1.0.3 loaded');
 // Semua token dan komponen ditemukan dari file aktif dan library yang di-enable.
 // Mode: audit, apply, undo (in-memory), annotate, clear-annotations, select.
 
@@ -54,7 +54,7 @@ const FILE_CATEGORY_LABEL = {
   OTHER: 'Lainnya'
 };
 
-const PLUGIN_VERSION = '1.0.2';
+const PLUGIN_VERSION = '1.0.3';
 const PLUGIN_VERSION_LABEL = '1.0';
 
 /** Aturan audit (sumber: rules.json di repo — disematkan, tanpa upload file). */
@@ -175,6 +175,13 @@ function registryFileKey() {
   return `${figma.fileKey || ''}|${figma.root.name}`;
 }
 
+/** dynamic-page: wajib sebelum akses `page.children`. */
+async function loadPageIfNeeded(page) {
+  if (page && page.type === 'PAGE' && typeof page.loadAsync === 'function') {
+    await page.loadAsync();
+  }
+}
+
 /** Koleksi variabel DS — prioritas Spacing/Radius (sering di file terpisah). */
 function libraryCollectionPriority(lc) {
   const label = `${lc.libraryName || ''} ${lc.name || ''}`.toLowerCase();
@@ -190,6 +197,7 @@ async function buildComponentIndex(scope) {
     await figma.loadAllPagesAsync();
     comps = figma.root.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] });
   } else {
+    await loadPageIfNeeded(figma.currentPage);
     comps = figma.currentPage.findAllWithCriteria({ types: ['COMPONENT', 'COMPONENT_SET'] });
   }
   return {
@@ -1021,6 +1029,7 @@ async function runAuditInner(msg) {
   };
 
   if (msg.scope === 'selection') {
+    await loadPageIfNeeded(figma.currentPage);
     const roots = figma.currentPage.selection.slice();
     if (roots.length === 0) {
       figma.ui.postMessage({ type: 'notice', text: 'Pilih layer di kanvas dulu.' });
@@ -1039,6 +1048,7 @@ async function runAuditInner(msg) {
       pages = [figma.currentPage];
     }
     for (const page of pages) {
+      await loadPageIfNeeded(page);
       ctx.page = page.name;
       ctx.pageNames.push(page.name);
       for (const child of page.children) await walk(child, ctx, null);
@@ -1190,27 +1200,31 @@ async function undoChanges(log) {
 
 // ---------- Mode: anotasi ----------
 
-function getAnnotationPage() {
+async function getAnnotationPage() {
+  await figma.loadAllPagesAsync();
   let page = figma.root.children.find((p) => p.name === ANNOTATION_PAGE);
   if (!page) {
     page = figma.createPage();
     page.name = ANNOTATION_PAGE;
   }
+  await loadPageIfNeeded(page);
   return page;
 }
 
 async function clearAnnotations() {
+  await figma.loadAllPagesAsync();
   const page = figma.root.children.find((p) => p.name === ANNOTATION_PAGE);
   if (!page) {
     figma.ui.postMessage({ type: 'notice', text: 'Tidak ada halaman anotasi.' });
     return;
   }
+  await loadPageIfNeeded(page);
   page.children.slice().forEach((n) => n.remove());
   figma.ui.postMessage({ type: 'notice', text: 'Anotasi dihapus.' });
 }
 
 async function annotate(violations) {
-  const page = getAnnotationPage();
+  const page = await getAnnotationPage();
   page.children.slice().forEach((n) => n.remove());
   await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
 
@@ -1313,10 +1327,12 @@ async function detachVariables(scope) {
       return;
     }
   } else if (scope === 'page') {
+    await loadPageIfNeeded(figma.currentPage);
     roots = figma.currentPage.children.slice();
   } else {
     await figma.loadAllPagesAsync();
     for (const page of figma.root.children) {
+      await loadPageIfNeeded(page);
       for (const child of page.children) roots.push(child);
     }
   }
@@ -1415,6 +1431,7 @@ async function remapVariable(scope, fromKey, toKey) {
       return;
     }
   } else {
+    await loadPageIfNeeded(figma.currentPage);
     roots = figma.currentPage.children.slice();
   }
   const tally = { fields: 0 };
@@ -1442,7 +1459,9 @@ async function selectNodes(ids) {
   if (nodes.length === 0) return;
   let p = nodes[0];
   while (p && p.type !== 'PAGE') p = p.parent;
+  if (p && p.type === 'PAGE') await loadPageIfNeeded(p);
   if (p && p.id !== figma.currentPage.id) await figma.setCurrentPageAsync(p);
+  await loadPageIfNeeded(figma.currentPage);
   figma.currentPage.selection = nodes;
   figma.viewport.scrollAndZoomIntoView(nodes);
 }
