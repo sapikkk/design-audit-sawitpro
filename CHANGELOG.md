@@ -2,6 +2,13 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## [2.2.4] — 2026-10-26
+
+### Added
+
+- Folder **`figma-dev/`** + `npm run figma:setup` untuk import manifest tanpa file TypeScript/stub di root.
+- Notifikasi Figma: «DESIGN AUDIT SawitPRO — panel siap» = plugin yang benar sudah jalan.
+
 ## [2.2.3] — 2026-10-26
 
 ### Changed

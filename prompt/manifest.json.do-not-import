@@ -1,0 +1,13 @@
+{
+  "name": "DESIGN AUDIT SAWITPRO",
+  "id": "1696532958279147641",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "permissions": ["teamlibrary"],
+  "networkAccess": {
+    "allowedDomains": ["none"]
+  }
+}

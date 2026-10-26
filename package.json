@@ -6,7 +6,9 @@
   "scripts": {
     "figma:check": "bash scripts/figma-dev-check.sh",
     "figma:fix-import": "bash scripts/figma-fix-dev-import.sh",
-    "figma:open-manifest": "open -R manifest.json",
+    "figma:bundle": "bash scripts/figma-bundle-dev.sh",
+    "figma:open-manifest": "open -R figma-dev/manifest.json",
+    "figma:setup": "npm run figma:bundle && npm run figma:fix-import && npm run figma:open-manifest",
     "build": "tsc -p tsconfig.json",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

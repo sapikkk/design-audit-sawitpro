@@ -54,6 +54,7 @@ const FILE_CATEGORY_LABEL = {
 };
 
 figma.showUI(__html__, { width: 420, height: 760, themeColors: true });
+figma.notify('DESIGN AUDIT SawitPRO — panel siap', { timeout: 2500 });
 
 /** Aturan audit (sumber: rules.json di repo — disematkan, tanpa upload file). */
 const AUDIT_RULES = {

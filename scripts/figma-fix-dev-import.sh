@@ -39,14 +39,23 @@ if not isinstance(ext, list):
     print("localFileExtensions tidak ada — tidak ada yang dibersihkan.")
     raise SystemExit(0)
 
+good_manifest = manifest
+dev_manifest = os.path.join(os.path.dirname(manifest), "figma-dev", "manifest.json")
+
 keep = []
 removed = []
+seen = set()
 for item in ext:
     path = item.get("manifestPath") or ""
-    if path.endswith("/prompt/code.js") or path.endswith("/prompt/ui.html"):
-        removed.append(path)
+    if not path.endswith("manifest.json"):
+        if "SAWITPRO AUDIT PLUGIN" in path or "design-audit" in path.lower():
+            removed.append(path)
         continue
-    if "SAWITPRO AUDIT PLUGIN" in path and path.endswith("manifest.json") and path != manifest:
+    if path in seen:
+        removed.append(path + " (duplikat)")
+        continue
+    seen.add(path)
+    if "SAWITPRO AUDIT PLUGIN" in path and path not in (good_manifest, dev_manifest):
         removed.append(path)
         continue
     keep.append(item)
@@ -74,8 +83,10 @@ echo "----------------------------------------"
 echo "Di Figma (Desktop disarankan):"
 echo "  1. Plugins → Development → Remove semua plugin audit/template duplikat"
 echo "     (yang error TypeScript / FILE_CATEGORY_LABEL = versi lama)."
-echo "  2. Import from manifest… → HANYA file ini:"
-echo "     $MANIFEST"
+DEV_MANIFEST="$ROOT/figma-dev/manifest.json"
+echo "  2. Import from manifest… → pilih SALAH SATU (disarankan figma-dev):"
+echo "     $DEV_MANIFEST"
+echo "     atau $MANIFEST"
 echo "  3. Tutup panel plugin → jalankan lagi DESIGN AUDIT SAWITPRO."
 echo ""
 echo "Console yang BOLEH diabaikan: LaunchDarkly 429, Gravatar CORS, Datadog 403."
