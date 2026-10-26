@@ -1,6 +1,6 @@
-// DS Audit Pro — code.js (v1.0.0)
+// DS Audit Pro — code.js (v1.0.2)
 // Berjalan di sandbox Figma. Tidak ada LLM, tidak ada network, tidak ada token di config.
-console.log('[DESIGN AUDIT SAWITPRO] plugin v1.0.0 loaded');
+console.log('[DESIGN AUDIT SAWITPRO] plugin v1.0.2 loaded');
 // Semua token dan komponen ditemukan dari file aktif dan library yang di-enable.
 // Mode: audit, apply, undo (in-memory), annotate, clear-annotations, select.
 
@@ -54,7 +54,7 @@ const FILE_CATEGORY_LABEL = {
   OTHER: 'Lainnya'
 };
 
-const PLUGIN_VERSION = '1.0.1';
+const PLUGIN_VERSION = '1.0.2';
 const PLUGIN_VERSION_LABEL = '1.0';
 
 /** Aturan audit (sumber: rules.json di repo — disematkan, tanpa upload file). */
@@ -540,7 +540,7 @@ async function bootUi() {
 }
 
 figma.showUI(__html__, { width: 420, height: 760, themeColors: true });
-figma.notify('DESIGN AUDIT SawitPRO v' + PLUGIN_VERSION_LABEL + ' — panel siap', { timeout: 2800 });
+figma.notify('Audit SawitPRO v' + PLUGIN_VERSION_LABEL + ' siap dipakai', { timeout: 2800 });
 bootUi();
 
 // ---------- Pencocokan nilai ----------
@@ -1023,7 +1023,7 @@ async function runAuditInner(msg) {
   if (msg.scope === 'selection') {
     const roots = figma.currentPage.selection.slice();
     if (roots.length === 0) {
-      figma.ui.postMessage({ type: 'notice', text: 'Pilih minimal satu layer di kanvas.' });
+      figma.ui.postMessage({ type: 'notice', text: 'Pilih layer di kanvas dulu.' });
       figma.ui.postMessage({ type: 'audit-abort' });
       return;
     }

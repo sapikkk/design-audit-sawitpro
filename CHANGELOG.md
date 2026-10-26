@@ -2,6 +2,12 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## [1.0.2] — 2026-10-27
+
+### Changed
+
+- Teks UI disederhanakan (tab Periksa / Perbaiki / Alat, alur ①②③, font 12–13px) untuk pengguna senior.
+
 ## [1.0.1] — 2026-10-27
 
 ### Changed

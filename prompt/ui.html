@@ -6,8 +6,8 @@
 <link rel="icon" type="image/png" href="icon.png">
 <style>
   :root {
-    --font-size-xsmall: 11px;
-    --font-size-small: 12px;
+    --font-size-xsmall: 12px;
+    --font-size-small: 13px;
     --size-medium: 32px;
     --background: #FFFFFF;
     --foreground: #1F1F1F;
@@ -371,10 +371,13 @@
   .stack { display: flex; flex-direction: column; gap: 10px; }
 
   .tab-intro {
-    font-size: var(--font-size-xsmall);
-    color: var(--muted-foreground);
-    line-height: 1.45;
+    font-size: var(--font-size-small);
+    color: var(--foreground);
+    line-height: 1.5;
     margin: 0;
+    padding: 8px 10px;
+    background: var(--muted);
+    border-radius: var(--radius);
   }
   .section-label {
     font-size: 10px;
@@ -412,22 +415,22 @@
 
 <div class="app">
   <div class="tabs" role="tablist">
-    <button type="button" id="tab-audit" data-active="true" role="tab" aria-selected="true">Audit</button>
-    <button type="button" id="tab-apply" data-active="false" role="tab" aria-selected="false">Apply</button>
-    <button type="button" id="tab-tools" data-active="false" role="tab" aria-selected="false">Tools</button>
+    <button type="button" id="tab-audit" data-active="true" role="tab" aria-selected="true">Periksa</button>
+    <button type="button" id="tab-apply" data-active="false" role="tab" aria-selected="false">Perbaiki</button>
+    <button type="button" id="tab-tools" data-active="false" role="tab" aria-selected="false">Alat</button>
   </div>
 
   <div class="meta" id="metaLine">
-    <span id="fileContext">Memuat file…</span>
-    · <span id="themeHint">Token UI</span>
+    <span id="fileContext">Memuat…</span>
+    · <span id="themeHint">Warna DS</span>
     <span id="warmupHint" style="display:none"></span>
   </div>
 
   <div class="panel on" id="p-audit">
     <div class="panel-body">
-      <p class="tab-intro"><b>Audit</b> — scan layer di file ini, bandingkan dengan token/style DS. Klik baris temuan untuk fokus layer di kanvas.</p>
+      <p class="tab-intro">① Pilih area &nbsp;→&nbsp; ② <b>Mulai periksa</b> &nbsp;→&nbsp; ③ Klik baris untuk lihat layer</p>
       <div class="field">
-        <span class="field-label">Cakupan</span>
+        <span class="field-label">Periksa bagian</span>
         <div class="segmented" id="scopeGroup">
           <button type="button" data-scope="selection" data-active="false">Seleksi</button>
           <button type="button" data-scope="page" data-active="true">Halaman</button>
@@ -436,40 +439,40 @@
       </div>
 
       <div class="field">
-        <label class="field-label" for="owner">PJ (opsional)</label>
-        <input type="text" id="owner" placeholder="Nama" autocomplete="off">
+        <label class="field-label" for="owner">Nama desainer (boleh kosong)</label>
+        <input type="text" id="owner" placeholder="Contoh: Budi" autocomplete="off">
       </div>
 
-      <button type="button" class="btn btn-primary" id="runBtn" style="width:100%">Jalankan audit</button>
+      <button type="button" class="btn btn-primary" id="runBtn" style="width:100%">Mulai periksa</button>
       <label class="toggle-row">
-        <input type="checkbox" id="refreshRegistry"> Muat ulang token library
+        <input type="checkbox" id="refreshRegistry"> Periksa ulang warna dari library (lebih lama)
       </label>
       <div id="progress"></div>
 
       <div class="scroll">
         <div id="emptyHint" class="card empty-hint">
-          <strong>Belum ada hasil</strong>
+          <strong>Belum ada laporan</strong>
           <ul>
-            <li>Pilih cakupan → <b>Jalankan audit</b>.</li>
-            <li>Nyalakan library DS 3.0 di file ini.</li>
+            <li>Tekan <b>Mulai periksa</b>.</li>
+            <li>Pastikan library SawitPRO sudah nyala (menu Assets).</li>
           </ul>
           <span id="libraryWarn" class="warn-chip" style="display:none"></span>
         </div>
         <div id="summary"></div>
         <div class="filters" id="filterBar" style="display:none;margin-top:10px">
           <select id="fCat" aria-label="Kategori">
-            <option value="">Semua kategori</option>
+            <option value="">Semua jenis masalah</option>
             <option>AUTO_LAYOUT</option><option>TYPOGRAPHY</option><option>COLOR</option>
             <option>SPACING</option><option>COMPONENT</option><option>NAMING</option><option>VARIABLE</option>
           </select>
           <select id="fSev" aria-label="Severity">
-            <option value="">Semua severity</option>
-            <option>HIGH</option><option>MEDIUM</option><option>LOW</option>
+            <option value="">Semua tingkat</option>
+            <option value="HIGH">Penting</option><option value="MEDIUM">Sedang</option><option value="LOW">Ringan</option>
           </select>
         </div>
         <div class="toggle-row" id="listToggles" style="display:none;margin-top:8px">
-          <label><input type="checkbox" id="grouped"> Kelompokkan</label>
-          <label><input type="checkbox" id="rawOnly"> Hanya non-EXACT</label>
+          <label><input type="checkbox" id="grouped"> Gabung yang sama</label>
+          <label><input type="checkbox" id="rawOnly"> Sembunyikan yang bisa otomatis</label>
         </div>
         <div id="list" style="margin-top:8px"></div>
       </div>
@@ -478,19 +481,19 @@
 
   <div class="panel" id="p-apply">
     <div class="panel-body">
-      <p class="tab-intro"><b>Apply</b> — perbaiki file: plugin mengikat variabel/style hanya untuk temuan <b>EXACT</b>. Temuan lain: ikuti saran token yang sudah ada di file/library (ubah manual di panel Variables).</p>
+      <p class="tab-intro">① Centang yang <b>plugin bisa perbaiki</b> &nbsp;→&nbsp; ② <b>Terapkan yang dicentang</b></p>
       <div id="applyStats" class="subtle" style="margin:8px 0"></div>
       <div class="btn-row">
-        <button type="button" class="btn btn-primary" id="applySel">Terapkan tercentang</button>
-        <button type="button" class="btn btn-secondary" id="applyAll">Semua EXACT</button>
+        <button type="button" class="btn btn-primary" id="applySel">Terapkan yang dicentang</button>
+        <button type="button" class="btn btn-secondary" id="applyAll">Terapkan semua (otomatis)</button>
       </div>
       <div class="btn-row">
-        <button type="button" class="btn btn-secondary" id="undoBtn" disabled>Pulihkan</button>
-        <button type="button" class="btn btn-secondary" id="annotateBtn">Anotasi</button>
-        <button type="button" class="btn btn-secondary" id="clearBtn">Hapus anotasi</button>
+        <button type="button" class="btn btn-secondary" id="undoBtn" disabled>Batalkan perubahan</button>
+        <button type="button" class="btn btn-secondary" id="annotateBtn">Tandai di halaman</button>
+        <button type="button" class="btn btn-secondary" id="clearBtn">Hapus tanda</button>
       </div>
       <div class="scroll" style="margin-top:8px;flex:1">
-        <div id="applyEmpty" class="apply-empty">Jalankan audit di tab Audit.</div>
+        <div id="applyEmpty" class="apply-empty">Dulu: tab Periksa → Mulai periksa.</div>
         <div id="applyList"></div>
       </div>
     </div>
@@ -498,20 +501,20 @@
 
   <div class="panel" id="p-tools">
     <div class="panel-body stack">
-      <p class="tab-intro"><b>Tools</b> — operasi variabel di project: lepas bind massal (detach) atau ganti token A→B (remap). Tidak menggantikan audit; dipakai setelah review atau migrasi token.</p>
+      <p class="tab-intro">Hanya jika perlu banyak: lepas variabel atau ganti token A jadi B.</p>
       <div class="card">
-        <div class="field-label">Detach variabel</div>
-        <p class="subtle" style="margin:4px 0 8px">Lepas bind variabel pada cakupan.</p>
+        <div class="field-label">Lepas variabel</div>
+        <p class="subtle" style="margin:4px 0 8px">Putuskan hubungan layer dengan variabel warna/jarak.</p>
         <div class="segmented" id="detachScope">
           <button type="button" data-scope="selection" data-active="true">Seleksi</button>
           <button type="button" data-scope="page" data-active="false">Halaman</button>
         </div>
-        <button type="button" class="btn btn-destructive" id="detachBtn" style="width:100%;margin-top:8px">Detach</button>
+        <button type="button" class="btn btn-destructive" id="detachBtn" style="width:100%;margin-top:8px">Lepas variabel</button>
       </div>
       <div class="card">
-        <div class="field-label">Remap variabel</div>
-        <p class="subtle" style="margin:4px 0 8px">Token A → B di seleksi.</p>
-        <button type="button" class="btn btn-secondary" id="loadCatalogBtn" style="width:100%;margin-bottom:8px">Muat daftar variabel</button>
+        <div class="field-label">Ganti variabel</div>
+        <p class="subtle" style="margin:4px 0 8px">Pada layer terpilih: variabel lama diganti variabel baru.</p>
+        <button type="button" class="btn btn-secondary" id="loadCatalogBtn" style="width:100%;margin-bottom:8px">Tampilkan daftar variabel</button>
         <div class="field">
           <label class="field-label" for="remapFrom">Dari</label>
           <select id="remapFrom"><option value="">— pilih —</option></select>
@@ -520,9 +523,9 @@
           <label class="field-label" for="remapTo">Ke</label>
           <select id="remapTo"><option value="">— pilih —</option></select>
         </div>
-        <button type="button" class="btn btn-primary" id="remapBtn" style="width:100%">Remap seleksi</button>
+        <button type="button" class="btn btn-primary" id="remapBtn" style="width:100%">Ganti pada layer terpilih</button>
       </div>
-      <p class="subtle">Layer dengan <code>[no-tokens]</code> di deskripsi komponen dilewati.</p>
+      <p class="subtle">Komponen bertanda [no-tokens] tidak diperiksa.</p>
     </div>
   </div>
 
@@ -575,9 +578,9 @@
     root.setProperty('--border', '#E6E6E6');
     root.setProperty('--input', '#E6E6E6');
     $('themeHint').textContent =
-      theme.source === 'ds-3.0-color' ? 'DS 3.0 Color'
-        : theme.source === 'ds-3.0-color-partial' ? 'DS 3.0 sebagian'
-          : 'Fallback';
+      theme.source === 'ds-3.0-color' ? 'Warna DS OK'
+        : theme.source === 'ds-3.0-color-partial' ? 'Warna DS sebagian'
+          : 'Warna standar';
   }
 
   function setTab(mode) {
@@ -617,14 +620,14 @@
     };
   });
   $('detachBtn').onclick = () => {
-    if (!confirm('Lepas bind variabel pada cakupan ini?')) return;
+    if (!confirm('Lepas variabel pada bagian ini?')) return;
     post({ type: 'detach-variables', scope: detachScope });
   };
   $('remapBtn').onclick = () => {
     const fromKey = $('remapFrom').value;
     const toKey = $('remapTo').value;
-    if (!fromKey || !toKey) { notice('Pilih variabel asal dan tujuan.'); return; }
-    if (!confirm('Remap bind variabel pada seleksi?')) return;
+    if (!fromKey || !toKey) { notice('Pilih variabel lama dan baru.'); return; }
+    if (!confirm('Ganti variabel pada layer terpilih?')) return;
     post({ type: 'remap-variable', scope: 'selection', fromKey, toKey });
   };
 
@@ -637,7 +640,7 @@
 
   $('runBtn').onclick = () => {
     notice('');
-    $('progress').textContent = 'Memulai…';
+    $('progress').textContent = 'Sedang memeriksa…';
     $('runBtn').disabled = true;
     post({
       type: 'audit',
@@ -695,20 +698,30 @@
           <div class="score">${audit.score.toFixed(1)}%</div>
           <span class="badge ${badgeCls}">${esc(badgeLabel)}</span>
         </div>
-        <div class="subtle" style="margin-top:4px">Coverage token: ${cov}%</div>
-        <div class="progress" title="Token coverage"><span style="width:${Math.min(100, Number(cov) || 0)}%"></span></div>
+        <div class="subtle" style="margin-top:4px">Pakai token DS: ${cov}%</div>
+        <div class="progress" title="Persentase token DS"><span style="width:${Math.min(100, Number(cov) || 0)}%"></span></div>
         <div style="margin-top:8px;font-weight:600;font-size:var(--font-size-xsmall)">${esc(audit.fileName)}</div>
         <div class="muted">${esc(audit.fileCategoryLabel || '')}</div>
         <div class="subtle" style="margin-top:6px">
-          Node ${audit.nodeCount} · EXACT ${exact} · HIGH ${counts.HIGH} · MED ${counts.MEDIUM} · LOW ${counts.LOW}
+          ${audit.nodeCount} layer · ${exact} bisa diperbaiki otomatis · penting ${counts.HIGH} · sedang ${counts.MEDIUM} · ringan ${counts.LOW}
         </div>
-        ${vu.defined != null ? `<div class="subtle" style="margin-top:4px">Variabel terikat: ${vu.usedOnLayers}/${vu.defined}</div>` : ''}
+        ${vu.defined != null ? `<div class="subtle" style="margin-top:4px">Variabel dipakai: ${vu.usedOnLayers} dari ${vu.defined}</div>` : ''}
       </div>`;
     $('filterBar').style.display = '';
     $('listToggles').style.display = '';
     if (audit.variableCatalog) fillCatalogSelects(audit.variableCatalog);
     renderList();
     renderApplyList();
+  }
+
+  function tingkatLabel(sev) {
+    if (sev === 'HIGH') return 'penting';
+    if (sev === 'MEDIUM') return 'sedang';
+    if (sev === 'LOW') return 'ringan';
+    return sev;
+  }
+  function jenisPerbaikan(v) {
+    return v.matchType === 'EXACT' ? 'otomatis' : 'manual';
   }
 
   function tokenNameFrom(v) {
@@ -727,15 +740,15 @@
     if (v.matchType === 'EXACT') {
       if (v.category === 'COLOR') {
         const part = v.field === 'strokes' ? 'stroke' : 'fill';
-        return `Otomatis: ikat ${part} ke variabel «${name}».`;
+        return `Plugin pasang ${part === 'stroke' ? 'garis' : 'isi warna'}: ${name}`;
       }
       if (v.category === 'SPACING' && v.field) {
-        return `Otomatis: ikat ${v.field} ke «${name}».`;
+        return `Plugin pasang jarak (${v.field}): ${name}`;
       }
       if (v.category === 'TYPOGRAPHY') {
-        return `Otomatis: terapkan text style «${name}».`;
+        return `Plugin pasang gaya teks: ${name}`;
       }
-      return name ? `Otomatis: ikat ke «${name}».` : 'Otomatis: perbaikan EXACT.';
+      return name ? `Plugin perbaiki otomatis: ${name}` : 'Plugin bisa perbaiki otomatis.';
     }
     return '';
   }
@@ -743,13 +756,13 @@
   function manualGuideLine(v) {
     const tok = nearestTokenFromSuggestion(v) || tokenNameFrom(v);
     if (tok) {
-      return `Manual: pilih layer → Variables → bind «${tok}» (sudah ada di file/library).`;
+      return `Anda: pilih layer → menu Variables → pilih «${tok}».`;
     }
-    if (v.category === 'AUTO_LAYOUT') return 'Manual: tambah Auto Layout di panel Design.';
-    if (v.category === 'NAMING') return 'Manual: rename layer sesuai semantic tim.';
-    if (v.category === 'COMPONENT') return 'Manual: swap ke komponen DS atau perbaiki instance.';
-    if (v.suggestion) return `Manual: ${v.suggestion}`;
-    return `Manual: ${v.issue}`;
+    if (v.category === 'AUTO_LAYOUT') return 'Anda: nyalakan Auto Layout (panel kanan).';
+    if (v.category === 'NAMING') return 'Anda: ubah nama layer.';
+    if (v.category === 'COMPONENT') return 'Anda: ganti ke komponen SawitPRO.';
+    if (v.suggestion) return `Anda: ${v.suggestion}`;
+    return `Anda: ${v.issue}`;
   }
 
   function appendFindingRow(container, v, opts) {
@@ -767,7 +780,7 @@
     const countBadge = v.count > 1 ? `<span class="count">×${v.count}</span>` : '';
     const token = tokenNameFrom(v) || nearestTokenFromSuggestion(v);
     const copyBtn = token
-      ? `<button type="button" class="btn btn-ghost copy-token">Salin nama token</button>`
+      ? `<button type="button" class="btn btn-ghost copy-token">Salin nama variabel</button>`
       : '';
     const action = applyActionLine(v);
     const manual = v.matchType === 'EXACT' ? '' : manualGuideLine(v);
@@ -776,7 +789,7 @@
       <div class="body" data-ids="${esc((v.ids || [v.id]).join(','))}">
         ${countBadge}
         <div><b>${esc(v.layerName)}</b> <span class="subtle">${esc(v.topLevelScreen || '')}</span></div>
-        <div class="muted">${esc(v.category)} · ${esc(v.severity)} · ${esc(v.matchType)}</div>
+        <div class="muted">${esc(v.category)} · ${esc(tingkatLabel(v.severity))} · ${esc(jenisPerbaikan(v))}</div>
         <div class="subtle">${esc(v.issue)}${v.currentValue ? ` · ${esc(v.currentValue)}` : ''}</div>
         ${action ? `<div class="action-line">${esc(action)}</div>` : ''}
         ${manual ? `<div class="action-line manual">${esc(manual)}</div>` : ''}
@@ -812,12 +825,12 @@
     emptyEl.style.display = 'none';
     const exact = audit.violations.filter((v) => v.matchType === 'EXACT');
     const manual = audit.violations.filter((v) => v.matchType !== 'EXACT');
-    statsEl.textContent = `${exact.length} EXACT (otomatis) · ${manual.length} perlu manual`;
+    statsEl.textContent = `${exact.length} plugin perbaiki · ${manual.length} Anda perbaiki sendiri`;
 
     if (exact.length) {
       const h = document.createElement('div');
       h.className = 'section-label';
-      h.textContent = 'Bisa diterapkan plugin';
+      h.textContent = 'Plugin perbaiki otomatis';
       listEl.appendChild(h);
       audit.violations.forEach((v, i) => {
         if (v.matchType === 'EXACT') appendFindingRow(listEl, { ...v, _index: i }, { checkboxes: true });
@@ -826,7 +839,7 @@
     if (manual.length) {
       const h2 = document.createElement('div');
       h2.className = 'section-label';
-      h2.textContent = 'Saran token / perbaikan manual';
+      h2.textContent = 'Anda perbaiki di Figma';
       listEl.appendChild(h2);
       audit.violations.forEach((v) => {
         if (v.matchType !== 'EXACT') appendFindingRow(listEl, v, { checkboxes: false });
@@ -850,30 +863,30 @@
   $('rawOnly').onchange = () => audit && renderList();
 
   $('applySel').onclick = () => {
-    if (!audit) { notice('Jalankan audit dulu.'); return; }
+    if (!audit) { notice('Dulu: tab Periksa → Mulai periksa.'); return; }
     const items = [...document.querySelectorAll('#applyList input[type=checkbox]:checked')]
       .map((c) => audit.violations[Number(c.dataset.i)]);
-    if (items.length === 0) { notice('Centang EXACT di daftar Apply.'); return; }
+    if (items.length === 0) { notice('Centang minimal satu item.'); return; }
     post({ type: 'apply', items });
   };
 
   $('applyAll').onclick = () => {
-    if (!audit) { notice('Jalankan audit dulu.'); return; }
+    if (!audit) { notice('Dulu: tab Periksa → Mulai periksa.'); return; }
     const items = audit.violations.filter((v) => v.matchType === 'EXACT');
-    if (items.length === 0) { notice('Tidak ada EXACT.'); return; }
-    if (!confirm(`Terapkan ${items.length} perubahan EXACT?`)) return;
+    if (items.length === 0) { notice('Tidak ada yang bisa otomatis.'); return; }
+    if (!confirm(`Terapkan ${items.length} perbaikan otomatis?`)) return;
     post({ type: 'apply', items });
   };
 
   $('undoBtn').onclick = () => {
-    if (!lastUndoLog) { notice('Belum ada perubahan.'); return; }
+    if (!lastUndoLog) { notice('Belum ada perubahan untuk dibatalkan.'); return; }
     post({ type: 'undo', log: lastUndoLog });
     lastUndoLog = null;
     setUndoAvailable(false);
   };
 
   $('annotateBtn').onclick = () => {
-    if (!audit) { notice('Jalankan audit dulu.'); return; }
+    if (!audit) { notice('Dulu: tab Periksa → Mulai periksa.'); return; }
     post({ type: 'annotate', violations: audit.violations });
   };
   $('clearBtn').onclick = () => post({ type: 'clear-annotations' });
@@ -909,7 +922,7 @@
       const w = $('libraryWarn');
       if (m.libraryCollectionCount === 0) {
         w.style.display = 'block';
-        w.textContent = 'Library variabel tidak terdeteksi. Nyalakan DS 3.0 di file ini.';
+        w.textContent = 'Library warna belum nyala. Menu Assets → nyalakan library SawitPRO.';
       } else {
         w.style.display = 'none';
       }
@@ -917,28 +930,28 @@
       $('fileContext').textContent = `${m.fileCategoryLabel} · ${m.fileName}`;
     } else if (m.type === 'progress') {
       if (m.done > 0) {
-        $('progress').textContent = `Memindai… ${m.done} node`;
+        $('progress').textContent = `Memeriksa… ${m.done} layer`;
       } else if (m.phase === 'registry') {
         if (m.registryLabel === 'cache') {
-          $('progress').textContent = 'Token cache — memindai…';
+          $('progress').textContent = 'Memuat warna…';
         } else if (m.registryTotal > 0) {
-          $('progress').textContent = `Token ${m.registryLoaded}/${m.registryTotal}`;
+          $('progress').textContent = `Memuat warna ${m.registryLoaded}/${m.registryTotal}`;
         } else {
-          $('progress').textContent = 'Menyiapkan token…';
+          $('progress').textContent = 'Menyiapkan warna…';
         }
       } else {
-        $('progress').textContent = 'Memindai…';
+        $('progress').textContent = 'Memeriksa layer…';
       }
     } else if (m.type === 'audit-result') {
       audit = m.data;
       $('runBtn').disabled = false;
       $('progress').textContent = '';
       renderAudit();
-      notice('Audit selesai.');
+      notice('Selesai. Lihat tab Perbaiki untuk lanjut.');
     } else if (m.type === 'apply-result') {
       lastUndoLog = m.undo && (m.undo.changes || []).length ? m.undo : null;
       setUndoAvailable(!!lastUndoLog);
-      notice(`Diterapkan ${m.applied}, dilewati ${m.skipped}.`);
+      notice(`Berhasil ${m.applied}, tidak jadi ${m.skipped}.`);
     } else if (m.type === 'variable-catalog') fillCatalogSelects(m.catalog);
     else if (m.type === 'audit-abort') {
       $('runBtn').disabled = false;
