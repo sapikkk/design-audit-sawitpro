@@ -4,6 +4,8 @@
   "description": "DESIGN AUDIT SAWITPRO — plugin Figma audit Design System + agregat laporan",
   "main": "code.js",
   "scripts": {
+    "figma:check": "bash scripts/figma-dev-check.sh",
+    "figma:open-manifest": "open -R manifest.json",
     "build": "tsc -p tsconfig.json",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

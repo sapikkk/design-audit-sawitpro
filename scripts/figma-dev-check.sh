@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Verifikasi plugin + path manifest untuk Import from manifest di Figma Desktop.
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+echo "== DESIGN AUDIT SAWITPRO — cek development =="
+echo "Folder: $ROOT"
+echo ""
+
+git rev-parse --abbrev-ref HEAD 2>/dev/null && git log -1 --oneline 2>/dev/null || true
+echo ""
+
+MANIFEST="$ROOT/manifest.json"
+if [[ ! -f "$MANIFEST" ]]; then
+  echo "ERROR: manifest.json tidak ada di root."
+  exit 1
+fi
+
+MAIN=$(python3 -c "import json; print(json.load(open('$MANIFEST'))['main'])")
+UI=$(python3 -c "import json; print(json.load(open('$MANIFEST'))['ui'])")
+ID=$(python3 -c "import json; print(json.load(open('$MANIFEST'))['id'])")
+
+echo "manifest.json (ROOT — pakai ini di Figma):"
+echo "  main: $MAIN"
+echo "  ui:   $UI"
+echo "  id:   $ID"
+echo ""
+
+if [[ "$MAIN" != "prompt/code.js" ]]; then
+  echo "ERROR: main harus prompt/code.js (bukan code.js root)."
+  exit 1
+fi
+
+for f in "$ROOT/$MAIN" "$ROOT/$UI" "$ROOT/prompt/ui.html" "$ROOT/icon.png"; do
+  if [[ -f "$f" ]]; then echo "  OK  ${f#$ROOT/}"; else echo "  MISS ${f#$ROOT/}"; exit 1; fi
+done
+
+node --check "$ROOT/prompt/code.js"
+echo "  OK  prompt/code.js (syntax)"
+echo ""
+
+if [[ -f "$ROOT/code.js" ]]; then
+  if grep -q "TypeScript" "$ROOT/code.js" 2>/dev/null; then
+    echo "WARN: $ROOT/code.js masih stub template — jangan jadikan main di manifest."
+  fi
+fi
+
+echo "----------------------------------------"
+echo "Di Figma Desktop (sekali):"
+echo "  Plugins → Development → Import from manifest…"
+echo "  Pilih file:"
+echo "  $MANIFEST"
+echo ""
+echo "Buka folder di Finder:"
+echo "  open -R \"$MANIFEST\""
+echo "----------------------------------------"
