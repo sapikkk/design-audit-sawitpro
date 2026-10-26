@@ -289,6 +289,24 @@
     display: none;
   }
   #notice.show { display: block; }
+
+  .empty-hint {
+    font-size: 11px;
+    color: var(--muted-foreground);
+    line-height: 1.5;
+  }
+  .empty-hint ol { margin: 8px 0 0; padding-left: 18px; }
+  .empty-hint li { margin-bottom: 4px; }
+  .warn-chip {
+    display: block;
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--warning) 18%, var(--card));
+    border: 1px solid color-mix(in srgb, var(--warning) 40%, var(--border));
+    color: #7a4e00;
+    font-size: 11px;
+  }
 </style>
 </head>
 <body>
@@ -329,6 +347,15 @@
     <div id="progress"></div>
 
     <div class="scroll">
+      <div id="emptyHint" class="card empty-hint">
+        <strong>Langkah pertama</strong>
+        <ol>
+          <li>Pastikan <b>Assets → Libraries</b> — library DS (3.0 Color) aktif.</li>
+          <li>Pilih cakupan: <b>Halaman</b> (umum) atau <b>Seleksi</b> (layer harus dipilih).</li>
+          <li>Klik <b>Jalankan audit</b> — skor & daftar temuan muncul di sini.</li>
+        </ol>
+        <span id="libraryWarn" class="warn-chip" style="display:none"></span>
+      </div>
       <div id="summary"></div>
       <div class="filters" id="filterBar" style="display:none;margin-top:10px">
         <select id="fCat" aria-label="Filter kategori">
@@ -530,6 +557,7 @@
   }
 
   function renderAudit() {
+    $('emptyHint').style.display = 'none';
     const counts = { HIGH: 0, MEDIUM: 0, LOW: 0 };
     audit.violations.forEach((v) => counts[v.severity]++);
     const exact = audit.violations.filter((v) => v.matchType === 'EXACT').length;
@@ -665,7 +693,15 @@
     const m = ev.data && ev.data.pluginMessage;
     if (!m) return;
     if (m.type === 'theme') applyTheme(m.theme);
-    else if (m.type === 'file-context') {
+    else if (m.type === 'boot-hints') {
+      const w = $('libraryWarn');
+      if (m.libraryCollectionCount === 0) {
+        w.style.display = 'block';
+        w.textContent = 'Tidak ada library variabel terdeteksi. Nyalakan library DS di file ini agar audit warna/spacing akurat.';
+      } else {
+        w.style.display = 'none';
+      }
+    } else if (m.type === 'file-context') {
       $('fileContext').textContent = `${m.fileCategoryLabel} · ${m.fileName}`;
     } else if (m.type === 'progress') {
       $('progress').textContent = `Memindai… ${m.done} node`;

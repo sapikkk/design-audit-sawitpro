@@ -2,6 +2,17 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## [2.2.1] — 2026-10-26
+
+### Added
+
+- Panduan rollout tim: [`docs/agent/team-rollout.md`](docs/agent/team-rollout.md).
+- Empty state + peringatan library di tab Audit saat boot plugin.
+
+### Changed
+
+- Dokumen publish/import — kapan perlu import manifest vs cukup run ulang.
+
 ## [2.2.0] — 2026-10-26
 
 ### Added

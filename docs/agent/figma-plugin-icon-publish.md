@@ -30,8 +30,11 @@ Setelah publish, `id` di `manifest.json` harus tetap sama dengan plugin di Figma
 
 ## Development import (sementara)
 
-- Di dalam panel, header hijau + logo sudah dari `prompt/ui.html`.
-- Bar native tetap `</>` sampai langkah publish di atas selesai.
-- Setelah ubah manifest: **Development → Import plugin from manifest** lagi (root `manifest.json`).
+- Di dalam panel, logo brand ada di bar gelap (`native-bridge` + `brand-icon.png`).
+- Bar native Figma tetap `</>` sampai **Fase B** publish selesai.
+- Setelah ubah **hanya** `code.js` / `ui.html`: jalankan plugin lagi — **tidak** perlu import manifest.
+- Import manifest lagi hanya jika **pindah folder**, **ubah manifest.json**, atau plugin hilang dari Development.
+
+Checklist lengkap: [`team-rollout.md`](team-rollout.md).
 
 Terakhir diperbarui: 2026-10-26.

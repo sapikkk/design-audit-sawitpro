@@ -49,6 +49,8 @@ flowchart LR
 
 Detail: [`prompt/README.md`](prompt/README.md).
 
+**Checklist tim (import → audit → publish):** [`docs/agent/team-rollout.md`](docs/agent/team-rollout.md).
+
 ---
 
 ## Instalasi

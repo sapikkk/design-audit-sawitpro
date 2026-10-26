@@ -350,6 +350,16 @@ async function bootUi() {
   } catch (e) {
     figma.ui.postMessage({ type: 'theme', theme: UI_THEME_FALLBACK });
   }
+  let libraryCollectionCount = 0;
+  try {
+    const cols = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
+    libraryCollectionCount = cols.length;
+  } catch (e) { /* teamlibrary */ }
+  figma.ui.postMessage({
+    type: 'boot-hints',
+    libraryCollectionCount,
+    selectionCount: figma.currentPage.selection.length
+  });
 }
 bootUi();
 

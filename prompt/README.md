@@ -19,9 +19,13 @@ aggregate.js                        — opsional/dev; tidak dipakai alur plugin
 ## Instalasi
 
 1. Clone repo.
-2. Figma → Plugins → Development → Import plugin from manifest → `manifest.json` (root repo mengarah ke folder ini).
+2. Figma Desktop → **Resources → Plugins & widgets → Development → Import from manifest…** → pilih **`manifest.json` di root repo** (bukan hanya folder `prompt/`).
 3. Pastikan `"id"` di manifest sesuai plugin development Figma Anda.
 4. Di file yang diaudit: aktifkan library DS (Assets → Libraries).
+
+**Setelah import:** edit kode → tutup panel plugin → jalankan lagi (import ulang hanya jika pindah folder / ubah manifest).
+
+Checklist lengkap: [`../docs/agent/team-rollout.md`](../docs/agent/team-rollout.md).
 
 **Ikon brand di bar atas Figma (bukan di dalam panel):** upload [`../icon.png`](../icon.png) saat **Publish plugin** (org privat SawitPRO). Panduan: [`../docs/agent/figma-plugin-icon-publish.md`](../docs/agent/figma-plugin-icon-publish.md).
 
