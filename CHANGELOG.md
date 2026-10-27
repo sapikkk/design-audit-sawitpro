@@ -2,6 +2,12 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## 1.2.4
+
+- Perbaiki resize panel: ukuran dihitung dari selisih posisi kursor di layar, jadi tidak goyang atau macet saat panel berubah.
+- Pegangan resize lebih besar (24 px); klik dua kali mengembalikan ke ukuran awal.
+- Batas ukuran maksimal naik jadi 900 × 1400.
+
 ## 1.2.3
 
 - Pesan di bawah hilang sendiri setelah 10 detik.

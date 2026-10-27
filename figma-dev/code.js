@@ -1,6 +1,6 @@
-// DS Audit Pro — code.js (v1.2.3)
+// DS Audit Pro — code.js (v1.2.4)
 // Berjalan di sandbox Figma. Tidak ada LLM, tidak ada network, tidak ada token di config.
-console.log('[DESIGN AUDIT SAWITPRO] plugin v1.2.3 loaded');
+console.log('[DESIGN AUDIT SAWITPRO] plugin v1.2.4 loaded');
 // Semua token dan komponen ditemukan dari file aktif dan library yang di-enable.
 // Mode: audit, apply, undo (in-memory), annotate, clear-annotations, select.
 
@@ -88,15 +88,15 @@ const FILE_CATEGORY_LABEL = {
   OTHER: 'Lainnya'
 };
 
-const PLUGIN_VERSION = '1.2.3';
+const PLUGIN_VERSION = '1.2.4';
 const PLUGIN_VERSION_LABEL = '1.2';
 
 const UI_DEFAULT_W = 420;
 const UI_DEFAULT_H = 760;
 const UI_MIN_W = 280;
 const UI_MIN_H = 400;
-const UI_MAX_W = 560;
-const UI_MAX_H = 1200;
+const UI_MAX_W = 900;
+const UI_MAX_H = 1400;
 const UI_SIZE_STORAGE_KEY = 'auditPluginUiSize';
 
 function clampUiSize(w, h) {
