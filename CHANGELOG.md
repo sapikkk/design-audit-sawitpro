@@ -2,6 +2,11 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## 1.2.7
+
+- Halaman Perbaiki: tab kategori sama seperti Periksa; filter dan Perbaiki semua otomatis mengikuti kategori aktif.
+- Kartu di Perbaiki tanpa instruksi manual panjang; ikon putar = pasang variabel, ikon kaca = tunjuk layer.
+
 ## 1.2.6
 
 - Ringkasan skor dan Opsi periksa sejajar di baris atas; daftar temuan naik ke atas.

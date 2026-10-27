@@ -798,6 +798,9 @@
     </div>
     <div class="panel-body">
       <div id="applyStats" class="subtle" style="margin:0 0 4px"></div>
+      <div class="filters" id="applyFilterBar" style="display:none;margin:0 0 8px">
+        <div class="cat-tabs" id="applyCatTabs" role="tablist" aria-label="Kategori temuan"></div>
+      </div>
       <div class="scroll" style="flex:1">
         <div id="applyEmpty" class="apply-empty" style="display:none"></div>
         <div id="applyList"></div>
@@ -987,7 +990,10 @@
     VIEWS.forEach((v) => $('p-' + v).classList.toggle('on', v === name));
     closeMoreMenu();
     notice('');
-    if (name === 'apply') renderApplyList();
+    if (name === 'apply') {
+      renderApplyCatTabs();
+      renderApplyList();
+    }
   }
   document.querySelectorAll('[data-go]').forEach((b) => { b.onclick = () => showView(b.dataset.go); });
   document.querySelectorAll('.back-btn').forEach((b) => { b.onclick = () => showView('home'); });
@@ -1159,14 +1165,43 @@
   }
 
   let curCat = '';
-  function renderCatTabs() {
-    const el = $('catTabs');
+  function pickCategory(cat) {
+    curCat = cat;
+    renderCatTabs();
+    renderApplyCatTabs();
+    renderList();
+    renderApplyList();
+  }
+  function paintCatTabs(el) {
+    if (!el || !audit || !audit.violations.length) return;
     const counts = {};
     audit.violations.forEach((v) => { counts[v.category] = (counts[v.category] || 0) + 1; });
-    const tabs = [['', 'Semua', audit.violations.length]].concat(Object.keys(counts).map((c) => [c, kategoriLabel(c), counts[c]]));
-    if (!counts[curCat]) curCat = '';
-    el.innerHTML = tabs.map(([c, l, n]) => `<button type="button" role="tab" class="cat-tab${c === curCat ? ' on' : ''}" data-cat="${esc(c)}">${esc(l)} (${n})</button>`).join('');
-    el.querySelectorAll('.cat-tab').forEach((b) => { b.onclick = () => { curCat = b.dataset.cat; renderCatTabs(); renderList(); }; });
+    if (curCat && !counts[curCat]) curCat = '';
+    const tabs = [['', 'Semua', audit.violations.length]].concat(
+      Object.keys(counts).sort().map((c) => [c, kategoriLabel(c), counts[c]])
+    );
+    el.innerHTML = tabs.map(([c, l, n]) =>
+      `<button type="button" role="tab" class="cat-tab${c === curCat ? ' on' : ''}" data-cat="${esc(c)}">${esc(l)} (${n})</button>`
+    ).join('');
+    el.querySelectorAll('.cat-tab').forEach((b) => { b.onclick = () => pickCategory(b.dataset.cat); });
+  }
+  function renderCatTabs() {
+    paintCatTabs($('catTabs'));
+  }
+  function renderApplyCatTabs() {
+    const bar = $('applyFilterBar');
+    if (!bar) return;
+    if (!audit || !audit.violations.length) {
+      bar.style.display = 'none';
+      return;
+    }
+    bar.style.display = '';
+    paintCatTabs($('applyCatTabs'));
+  }
+  function violationsForCategory(cat) {
+    return audit.violations
+      .map((v, i) => ({ ...v, _index: i }))
+      .filter((v) => !cat || v.category === cat);
   }
   function setOptsCollapsed(on) {
     $('optsWrap').classList.toggle('collapsed', on);
@@ -1178,14 +1213,10 @@
   $('auditScope').onchange = () => setOptsCollapsed($('optsWrap').classList.contains('collapsed'));
 
   function filteredViolations() {
-    const cat = curCat;
-    return audit.violations
-      .map((v, i) => ({ ...v, _index: i }))
-      .filter((v) => {
-        if (cat && v.category !== cat) return false;
-        if ($('rawOnly').checked && v.matchType === 'EXACT') return false;
-        return true;
-      });
+    return violationsForCategory(curCat).filter((v) => {
+      if ($('rawOnly').checked && v.matchType === 'EXACT') return false;
+      return true;
+    });
   }
 
   function renderAudit() {
@@ -1209,6 +1240,7 @@
     $('listToggles').style.display = '';
     if (audit.variableCatalog) fillCatalogSelects(audit.variableCatalog);
     renderCatTabs();
+    renderApplyCatTabs();
     renderList();
     renderApplyList();
   }
@@ -1282,15 +1314,20 @@
     const copyBtn = token
       ? `<button type="button" class="btn btn-ghost copy-token">Salin nama variabel</button>`
       : '';
+    const onApplyPage = opts && opts.page === 'apply';
     const action = applyActionLine(v);
-    const manual = v.matchType === 'EXACT' ? '' : manualGuideLine(v);
+    const manual = (!onApplyPage && v.matchType !== 'EXACT') ? manualGuideLine(v) : '';
+    const statusLine = onApplyPage
+      ? (v.matchType === 'EXACT' ? 'Ketuk ikon → pasang variabel' : 'Ketuk ikon → tunjuk layer')
+      : `${kategoriLabel(v.category)} · ${v.matchType === 'EXACT' ? 'bisa otomatis' : 'tunjuk layer'}`;
+    const actionShown = onApplyPage && v.matchType === 'EXACT' ? '' : action;
     row.innerHTML = `
       <div class="body" data-ids="${esc((v.ids || [v.id]).join(','))}" data-idx="${idx}">
         ${countBadge}
         <div><b>${esc(v.layerName)}</b> <span class="subtle">${esc(v.topLevelScreen || '')}</span></div>
-        <div class="muted">${esc(kategoriLabel(v.category))} · ${v.matchType === 'EXACT' ? 'bisa otomatis' : 'perbaiki manual'}</div>
+        <div class="muted">${esc(statusLine)}</div>
         <div class="subtle">${esc(humanizeCopy(v.issue))}</div>
-        ${action ? `<div class="action-line">${esc(humanizeCopy(action))}</div>` : ''}
+        ${actionShown ? `<div class="action-line">${esc(humanizeCopy(actionShown))}</div>` : ''}
         ${manual ? `<div class="action-line manual">${esc(manual)}</div>` : ''}
         ${copyBtn}
       </div>
@@ -1337,7 +1374,7 @@
       return;
     }
     post(ids.length > 1 ? { type: 'select-many', nodeIds: ids } : { type: 'select', nodeId: ids[0] });
-    notice(manualGuideLine(v));
+    notice('Layer dipilih di kanvas.');
   }
 
   function renderApplyList() {
@@ -1347,30 +1384,25 @@
     if (!listEl) return;
     listEl.innerHTML = '';
     if (!audit || !audit.violations.length) {
-      emptyEl.style.display = 'none';
+      $('applyFilterBar').style.display = 'none';
+      emptyEl.style.display = 'block';
+      emptyEl.textContent = audit ? 'Tidak ada temuan.' : 'Jalankan Periksa dulu, lalu kembali ke sini.';
       statsEl.textContent = '';
       return;
     }
     emptyEl.style.display = 'none';
-    const exact = audit.violations.filter((v) => v.matchType === 'EXACT');
-    const manual = audit.violations.filter((v) => v.matchType !== 'EXACT');
-    let statsHtml = `${exact.length} bisa otomatis · ${manual.length} perlu manual`;
-    if (exact.length === 0 && manual.length > 0) {
-      statsHtml += `<div class="subtle" style="margin-top:6px">Otomatis hanya jika nilai layer sama dengan variabel (selisih maksimal 1 px), warnanya persis, atau gaya teksnya cocok. Penamaan, komponen, dan Auto Layout selalu manual.</div>`;
-    }
-    statsEl.innerHTML = statsHtml;
+    renderApplyCatTabs();
+    const slice = violationsForCategory(curCat);
+    const exact = slice.filter((v) => v.matchType === 'EXACT');
+    const catLabel = curCat ? kategoriLabel(curCat) : 'Semua';
+    statsEl.textContent = `${catLabel}: ${exact.length} dari ${slice.length} temuan bisa diperbaiki otomatis`;
 
-    const appendSection = (title, pred) => {
-      const slice = audit.violations.map((v, i) => ({ v, i })).filter(({ v }) => pred(v));
-      if (!slice.length) return;
-      const h = document.createElement('div');
-      h.className = 'section-label';
-      h.textContent = title;
-      listEl.appendChild(h);
-      slice.forEach(({ v, i }) => appendFindingRow(listEl, { ...v, _index: i }, { showFix: true }));
-    };
-    appendSection('Bisa diperbaiki otomatis', (v) => v.matchType === 'EXACT');
-    appendSection('Perbaiki manual di Figma', (v) => v.matchType !== 'EXACT');
+    const ordered = slice.slice().sort((a, b) => {
+      if (a.matchType === 'EXACT' && b.matchType !== 'EXACT') return -1;
+      if (a.matchType !== 'EXACT' && b.matchType === 'EXACT') return 1;
+      return 0;
+    });
+    ordered.forEach((v) => appendFindingRow(listEl, v, { showFix: true, page: 'apply' }));
   }
 
   function renderList() {
@@ -1388,12 +1420,16 @@
 
   $('applyAll').onclick = () => {
     if (!audit) { notice('Jalankan Periksa dulu.'); return; }
-    const items = audit.violations.filter((v) => v.matchType === 'EXACT');
+    let items = audit.violations.filter((v) => v.matchType === 'EXACT');
+    if (curCat) items = items.filter((v) => v.category === curCat);
     if (items.length === 0) {
-      notice('Tidak ada yang bisa otomatis. Semua temuan perlu dicek di Figma: nilai layer tidak cocok persis dengan token, atau jenis temuan (penamaan, komponen, Auto Layout) tidak didukung plugin.');
+      notice(curCat
+        ? 'Di kategori ini tidak ada temuan yang bisa diperbaiki otomatis.'
+        : 'Tidak ada temuan yang bisa diperbaiki otomatis. Nilai layer belum cocok persis dengan variabel.');
       return;
     }
-    if (!confirm(`Perbaiki otomatis ${items.length} item?`)) return;
+    const catHint = curCat ? ` (${kategoriLabel(curCat)})` : '';
+    if (!confirm(`Perbaiki otomatis ${items.length} item${catHint}?`)) return;
     post({ type: 'apply', items });
   };
 

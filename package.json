@@ -1,6 +1,6 @@
 {
   "name": "design-audit-sawitpro",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "description": "DESIGN AUDIT SAWITPRO — plugin Figma audit Design System + agregat laporan",
   "main": "prompt/code.js",
   "scripts": {
