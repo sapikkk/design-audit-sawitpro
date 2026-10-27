@@ -1,6 +1,6 @@
-// DS Audit Pro — code.js (v1.0.7)
+// DS Audit Pro — code.js (v1.0.8)
 // Berjalan di sandbox Figma. Tidak ada LLM, tidak ada network, tidak ada token di config.
-console.log('[DESIGN AUDIT SAWITPRO] plugin v1.0.7 loaded');
+console.log('[DESIGN AUDIT SAWITPRO] plugin v1.0.8 loaded');
 // Semua token dan komponen ditemukan dari file aktif dan library yang di-enable.
 // Mode: audit, apply, undo (in-memory), annotate, clear-annotations, select.
 
@@ -66,7 +66,7 @@ const FILE_CATEGORY_LABEL = {
   OTHER: 'Lainnya'
 };
 
-const PLUGIN_VERSION = '1.0.7';
+const PLUGIN_VERSION = '1.0.8';
 const PLUGIN_VERSION_LABEL = '1.0';
 
 /** Aturan audit (sumber: rules.json di repo — disematkan, tanpa upload file). */
@@ -1338,6 +1338,12 @@ async function annotate(violations) {
 
 // ---------- Seleksi ----------
 
+function pageOfNode(node) {
+  let cur = node;
+  while (cur && cur.type !== 'PAGE') cur = cur.parent;
+  return cur && cur.type === 'PAGE' ? cur : null;
+}
+
 async function selectNode(id) {
   await selectNodes([id]);
 }
@@ -1517,19 +1523,59 @@ async function loadVariableCatalog() {
 }
 
 async function selectNodes(ids) {
-  const nodes = [];
-  for (const id of ids) {
-    const node = await figma.getNodeByIdAsync(id);
-    if (node) nodes.push(node);
+  const uniqueIds = [...new Set((ids || []).filter(Boolean))];
+  if (uniqueIds.length === 0) return;
+
+  await figma.loadAllPagesAsync();
+
+  const entries = [];
+  for (const id of uniqueIds) {
+    try {
+      const node = await figma.getNodeByIdAsync(id);
+      if (!node || node.type === 'PAGE' || node.type === 'DOCUMENT') continue;
+      entries.push({ id, node });
+    } catch (e) { /* node hilang */ }
   }
-  if (nodes.length === 0) return;
-  let p = nodes[0];
-  while (p && p.type !== 'PAGE') p = p.parent;
-  if (p && p.type === 'PAGE') await loadPageIfNeeded(p);
-  if (p && p.id !== figma.currentPage.id) await figma.setCurrentPageAsync(p);
+  if (entries.length === 0) {
+    figma.ui.postMessage({ type: 'notice', text: 'Layer tidak ditemukan.' });
+    return;
+  }
+
+  const targetPage = pageOfNode(entries[0].node);
+  if (!targetPage) {
+    figma.ui.postMessage({ type: 'notice', text: 'Halaman layer tidak ditemukan.' });
+    return;
+  }
+
+  await loadPageIfNeeded(targetPage);
+  if (figma.currentPage.id !== targetPage.id) {
+    await figma.setCurrentPageAsync(targetPage);
+  }
   await loadPageIfNeeded(figma.currentPage);
-  figma.currentPage.selection = nodes;
-  figma.viewport.scrollAndZoomIntoView(nodes);
+
+  const onPage = [];
+  for (const { id } of entries) {
+    try {
+      const node = await figma.getNodeByIdAsync(id);
+      const pg = node && pageOfNode(node);
+      if (node && pg && pg.id === figma.currentPage.id) onPage.push(node);
+    } catch (e) { /* lewati */ }
+  }
+  if (onPage.length === 0) {
+    figma.ui.postMessage({ type: 'notice', text: 'Layer tidak ada di halaman «' + targetPage.name + '».' });
+    return;
+  }
+
+  figma.currentPage.selection = onPage;
+  figma.viewport.scrollAndZoomIntoView(onPage);
+
+  const skipped = entries.length - onPage.length;
+  if (skipped > 0) {
+    figma.ui.postMessage({
+      type: 'notice',
+      text: `Ditunjuk ${onPage.length} layer di «${targetPage.name}». ${skipped} layer di halaman lain dilewati.`
+    });
+  }
 }
 
 // ---------- Router ----------

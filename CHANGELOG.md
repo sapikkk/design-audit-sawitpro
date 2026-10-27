@@ -2,6 +2,12 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## [1.0.8] — 2026-10-27
+
+### Fixed
+
+- **Tunjuk layer** / **Perbaiki (tunjuk layer)**: pindah ke halaman layer dulu (`loadAllPagesAsync` + `setCurrentPageAsync`); temuan gabungan lintas halaman hanya seleksi layer di halaman yang sama.
+
 ## [1.0.7] — 2026-10-27
 
 ### Fixed
