@@ -230,6 +230,7 @@
     padding: 16px;
   }
 
+  .summary-meta { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-size: var(--font-size-xsmall); color: var(--text-subtle); }
   .score-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
   .score { font-size: var(--font-size-score); font-weight: 700; color: var(--brand); line-height: 1.2; }
   /* Badge / Chips: pill · padding 2/6 · Caption */
@@ -911,6 +912,8 @@
     if (!text) { el.classList.remove('show'); el.textContent = ''; return; }
     el.textContent = humanizeNotice(text);
     el.classList.add('show');
+    clearTimeout(notice._t);
+    notice._t = setTimeout(() => { el.classList.remove('show'); el.textContent = ''; }, 10000);
   }
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -1168,12 +1171,8 @@
           <div class="score">${audit.score.toFixed(1)}%</div>
           <span class="badge ${badgeCls}">${esc(badgeLabel)}</span>
         </div>
-        <div class="subtle" style="margin-top:4px">Kesesuaian dengan Design System SawitPRO</div>
-        <div style="margin-top:8px;font-weight:600;font-size:var(--font-size-xsmall)">${esc(audit.fileName)}</div>
-        <div class="muted">${esc(audit.fileCategoryLabel || '')}</div>
-        <div class="subtle" style="margin-top:6px">${audit.nodeCount} layer diperiksa · ${exact} bisa diperbaiki otomatis</div>
-        ${vu.defined != null ? `<div class="subtle" style="margin-top:4px">Variabel dipakai: ${vu.usedOnLayers} dari ${vu.defined}</div>` : ''}
-        ${tokenLine ? `<div class="subtle" style="margin-top:4px">${esc(tokenLine)}</div>` : ''}
+        <div class="subtle" style="margin-top:2px">Kesesuaian dengan Design System SawitPRO</div>
+        <div class="summary-meta" title="${esc(tokenLine)}">${esc(audit.fileName)} · ${fmt(audit.nodeCount)} layer · ${exact} bisa otomatis</div>
       </div>`;
     $('filterBar').style.display = '';
     $('listToggles').style.display = '';

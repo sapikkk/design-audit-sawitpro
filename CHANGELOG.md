@@ -2,6 +2,11 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## 1.2.3
+
+- Pesan di bawah hilang sendiri setelah 10 detik.
+- Ringkasan hasil periksa lebih ringkas: skor, status, lalu satu baris nama file, jumlah layer, dan yang bisa otomatis.
+
 ## 1.2.2
 
 - Tab kategori jadi chip bergaris, contoh "Semua (41)"; chip aktif berwarna hijau.
