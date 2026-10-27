@@ -1,6 +1,6 @@
-// DS Audit Pro — code.js (v1.0.3)
+// DS Audit Pro — code.js (v1.0.4)
 // Berjalan di sandbox Figma. Tidak ada LLM, tidak ada network, tidak ada token di config.
-console.log('[DESIGN AUDIT SAWITPRO] plugin v1.0.3 loaded');
+console.log('[DESIGN AUDIT SAWITPRO] plugin v1.0.4 loaded');
 // Semua token dan komponen ditemukan dari file aktif dan library yang di-enable.
 // Mode: audit, apply, undo (in-memory), annotate, clear-annotations, select.
 
@@ -11,8 +11,20 @@ const NO_TOKENS_TAG = /\[no-tokens\]/i;
 const DEFAULT_NAME = /^(Frame|Rectangle|Group|Vector|Text|Ellipse) \d+$/;
 const SPACING_FIELDS = ['itemSpacing', 'paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom'];
 const RADIUS_CORNERS = ['topLeftRadius', 'topRightRadius', 'bottomLeftRadius', 'bottomRightRadius'];
-const SPACING_NAME = /^(spacing|space|gap|padding)/i;
-const RADIUS_NAME = /^radius/i;
+/** Cocokkan nama variabel DS (path `Padding/...`, `Spacing/...`, dll.). */
+const SPACING_NAME = /(?:^|[\/])(spacing|space|gap|padding|margin|inset|size|dimension|grid|stack|gutter)/i;
+const RADIUS_NAME = /(?:^|[\/])(radius|corner|rounded|radii|border-radius)/i;
+const TYPO_FLOAT_NAME = /(?:^|[\/])(font-size|fontsize|line-height|lineheight|letter-spacing|leading|typography|type-scale)/i;
+
+function isRadiusTokenName(name) {
+  return RADIUS_NAME.test(name || '');
+}
+
+function classifyFloatVariable(name) {
+  if (isRadiusTokenName(name)) return 'radius';
+  if (TYPO_FLOAT_NAME.test(name || '')) return 'typography';
+  return 'spacing';
+}
 const ANNOTATION_STYLE = {
   SPACING: { color: '#FF9800', prefix: 'SPACE' },
   RADIUS: { color: '#07A05E', prefix: 'RADIUS' },
@@ -54,7 +66,7 @@ const FILE_CATEGORY_LABEL = {
   OTHER: 'Lainnya'
 };
 
-const PLUGIN_VERSION = '1.0.3';
+const PLUGIN_VERSION = '1.0.4';
 const PLUGIN_VERSION_LABEL = '1.0';
 
 /** Aturan audit (sumber: rules.json di repo — disematkan, tanpa upload file). */
@@ -185,10 +197,11 @@ async function loadPageIfNeeded(page) {
 /** Koleksi variabel DS — prioritas Spacing/Radius (sering di file terpisah). */
 function libraryCollectionPriority(lc) {
   const label = `${lc.libraryName || ''} ${lc.name || ''}`.toLowerCase();
-  if (/ds\s*3\.0|design.system|3\.0.*color|color.*3\.0/.test(label)) return 0;
-  if (/color|semantic|brand|token/.test(label)) return 1;
-  if (/spacing|radius|size|dimension/.test(label)) return 2;
-  return 3;
+  if (/ds\s*3\.0|design.system|3\.0/.test(label)) return 0;
+  if (/color|semantic|brand/.test(label)) return 1;
+  if (/typography|font|text.style|type-scale/.test(label)) return 2;
+  if (/spacing|radius|padding|size|dimension|grid/.test(label)) return 3;
+  return 4;
 }
 
 async function buildComponentIndex(scope) {
@@ -206,11 +219,10 @@ async function buildComponentIndex(scope) {
   };
 }
 
-/** Lewati import library yang tidak dipakai audit (percepat load). */
+/** Impor variabel library yang dipakai audit token (warna + semua FLOAT numerik). */
 function shouldImportLibraryMeta(lv) {
   const t = lv.resolvedType;
-  if (t === 'COLOR') return true;
-  if (t === 'FLOAT') return SPACING_NAME.test(lv.name) || RADIUS_NAME.test(lv.name);
+  if (t === 'COLOR' || t === 'FLOAT') return true;
   return false;
 }
 
@@ -239,6 +251,7 @@ async function buildRegistryUncached(scope, silent) {
     colorVariables: [],
     spacingVariables: [],
     radiusVariables: [],
+    typographyVariables: [],
     textStyles: [],
     componentKeys: [],
     componentNames: [],
@@ -258,8 +271,11 @@ async function buildRegistryUncached(scope, silent) {
       if (v.resolvedType === 'COLOR' && val && typeof val === 'object' && 'r' in val) {
         reg.colorVariables.push({ ...base, hex: toHex(val) });
       } else if (v.resolvedType === 'FLOAT' && typeof val === 'number') {
-        if (RADIUS_NAME.test(v.name)) reg.radiusVariables.push({ ...base, px: val });
-        else if (SPACING_NAME.test(v.name)) reg.spacingVariables.push({ ...base, px: val });
+        const kind = classifyFloatVariable(v.name);
+        const row = { ...base, px: val };
+        if (kind === 'radius') reg.radiusVariables.push(row);
+        else if (kind === 'typography') reg.typographyVariables.push(row);
+        else reg.spacingVariables.push(row);
       }
     } catch (e) { /* variabel rusak / alias putus */ }
   }
@@ -304,11 +320,15 @@ async function buildRegistryUncached(scope, silent) {
     } catch (e) { /* lewati */ }
   }
 
-  for (const s of await figma.getLocalTextStylesAsync()) {
+  const seenStyleKeys = new Set();
+  function pushTextStyle(s, origin) {
+    if (!s || !s.key || seenStyleKeys.has(s.key)) return;
+    seenStyleKeys.add(s.key);
     reg.textStyles.push({
       name: s.name,
       key: s.key,
       id: s.id,
+      origin,
       fontFamily: s.fontName.family,
       fontStyle: s.fontName.style,
       fontSize: s.fontSize,
@@ -316,18 +336,42 @@ async function buildRegistryUncached(scope, silent) {
     });
   }
 
+  for (const s of await figma.getLocalTextStylesAsync()) pushTextStyle(s, 'local');
+
+  let libStyles = [];
+  try {
+    libStyles = await figma.teamLibrary.getAvailableLibraryStylesAsync();
+  } catch (e) {
+    reg.notes.push('Library text style tidak tersedia (permission teamlibrary).');
+  }
+  const textStyleQueue = libStyles.filter((ls) => ls && ls.key && ls.type === 'TEXT');
+  let loadedStyles = 0;
+  for (const ls of textStyleQueue) {
+    loadedStyles++;
+    if (loadedStyles % 8 === 0) await sleep();
+    try {
+      const s = await figma.importStyleByKeyAsync(ls.key);
+      if (s && s.type === 'TEXT') pushTextStyle(s, 'library');
+    } catch (e) { /* lewati style yang gagal diimpor */ }
+  }
+
   const comps = await buildComponentIndex(scope);
   reg.componentKeys = comps.componentKeys;
   reg.componentNames = comps.componentNames;
 
-  reg.notes.push('Style dan komponen dari library tidak bisa didaftar lewat API; yang dipakai akan terdeteksi saat audit.');
-  if (totalLib > 0) {
-    reg.notes.push(`Library: ${loadedLib} variabel audit-relevant diimpor: warna + spacing/radius.`);
+  reg.notes.push('Komponen library terdeteksi lewat instance; text style library diimpor untuk typography.');
+  if (totalLib > 0 || loadedStyles > 0) {
+    reg.notes.push(
+      `Registry: ${reg.colorVariables.length} warna, ${reg.spacingVariables.length} spacing/padding, `
+      + `${reg.radiusVariables.length} radius, ${reg.typographyVariables.length} typography-float, `
+      + `${reg.textStyles.length} text style (${loadedLib} variabel library diimpor).`
+    );
   }
   reg.variableCatalog = [
     ...reg.colorVariables,
     ...reg.spacingVariables,
-    ...reg.radiusVariables
+    ...reg.radiusVariables,
+    ...reg.typographyVariables
   ].map((v) => ({ name: v.name, key: v.key, id: v.id, kind: v.hex ? 'COLOR' : 'FLOAT' }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -687,9 +731,23 @@ function checkAutoLayout(node, ctx, base, isScreen) {
 function checkTypography(node, ctx, base) {
   if (node.type !== 'TEXT' || node.characters.length === 0) return;
   const ts = node.textStyleId;
-  const ok = typeof ts === 'string' && ts !== '';
+  const bv = node.boundVariables || {};
+  const boundTypo = bv.fontSize || bv.lineHeight || bv.letterSpacing;
+  const ok = (typeof ts === 'string' && ts !== '') || !!boundTypo;
   count(ctx, 'TYPOGRAPHY', ok);
   if (ok) return;
+  if (node.fontSize !== figma.mixed && typeof node.fontSize === 'number') {
+    const fontMatch = matchPx(node.fontSize, ctx.reg.typographyVariables);
+    if (fontMatch.matchType === 'EXACT') {
+      addViolation(ctx, base, 'TYPOGRAPHY', 'MEDIUM', 'Font size belum terikat variabel typography', {
+        field: 'fontSize',
+        currentValue: String(node.fontSize),
+        subCategory: 'FONT',
+        ...fontMatch
+      });
+      return;
+    }
+  }
   const style = matchTextStyle(node, ctx.reg);
   const fontStr = (node.fontName === figma.mixed || node.fontSize === figma.mixed)
     ? 'campuran'
@@ -1081,6 +1139,7 @@ async function runAuditInner(msg) {
       colorVariables: reg.colorVariables.length,
       spacingVariables: reg.spacingVariables.length,
       radiusVariables: reg.radiusVariables.length,
+      typographyVariables: reg.typographyVariables.length,
       textStyles: reg.textStyles.length,
       libraryCollections: reg.libraryCollections
     },
@@ -1152,6 +1211,13 @@ async function applyChanges(items) {
         if (!v) { skipped++; continue; }
         changes.push({ nodeId: node.id, kind: 'field', field: it.field, prev: node[it.field] });
         node.setBoundVariable(it.field, v);
+        applied++;
+      } else if (it.category === 'TYPOGRAPHY' && node.type === 'TEXT' && it.field === 'fontSize') {
+        const v = await resolveVariable(it);
+        if (!v) { skipped++; continue; }
+        if (node.fontName !== figma.mixed) await figma.loadFontAsync(node.fontName);
+        changes.push({ nodeId: node.id, kind: 'field', field: 'fontSize', prev: node.fontSize });
+        node.setBoundVariable('fontSize', v);
         applied++;
       } else if (it.category === 'TYPOGRAPHY' && node.type === 'TEXT') {
         const style = await resolveStyle(it);

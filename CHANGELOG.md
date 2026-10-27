@@ -2,6 +2,14 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## [1.0.4] — 2026-10-27
+
+### Changed
+
+- Registry: impor **semua** variabel library `FLOAT` (spacing, padding, radius, size) — tidak hanya yang namanya diawali `spacing`/`radius`.
+- Text style dari **library tim** diimpor lewat `getAvailableLibraryStylesAsync` agar typography bisa EXACT + **Perbaiki otomatis**.
+- Teks dengan `fontSize` terikat variabel dianggap lulus typography; font size raw yang cocok token typography mendapat saran bind variabel.
+
 ## [1.0.3] — 2026-10-27
 
 ### Fixed

@@ -740,6 +740,9 @@
       if (v.category === 'SPACING' && v.field) {
         return `Plugin pasang jarak (${v.field}): ${name}`;
       }
+      if (v.category === 'TYPOGRAPHY' && v.field === 'fontSize') {
+        return `Plugin ikat ukuran font: ${name}`;
+      }
       if (v.category === 'TYPOGRAPHY') {
         return `Plugin pasang gaya teks: ${name}`;
       }
