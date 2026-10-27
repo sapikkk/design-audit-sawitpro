@@ -2,6 +2,12 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## [1.0.6] — 2026-10-27
+
+### Changed
+
+- Hapus bar meta (file/konteks/token), intro tab ①②③, dan teks panduan kosong yang berulang.
+
 ## [1.0.5] — 2026-10-27
 
 ### Changed

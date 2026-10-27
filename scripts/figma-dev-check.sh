@@ -48,7 +48,7 @@ if grep -E 'import[[:space:]]*\(' "$ROOT/prompt/code.js" >/dev/null; then
   grep -n -E 'import[[:space:]]*\(' "$ROOT/prompt/code.js" || true
   exit 1
 fi
-if ! grep -q "PLUGIN_VERSION = '1.0.5'" "$ROOT/prompt/code.js"; then
+if ! grep -q "PLUGIN_VERSION = '1.0.6'" "$ROOT/prompt/code.js"; then
   echo "ERROR: PLUGIN_VERSION 1.0.5 tidak ada di code.js"
   exit 1
 fi
