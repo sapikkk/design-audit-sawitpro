@@ -30,6 +30,8 @@ Sudah jika toast **“has been imported”** dan plugin ada di **Resources → P
 
 Detail: [`figma-plugin-icon-publish.md`](figma-plugin-icon-publish.md).
 
+**Listing publik (Figma Community):** [`publish-community.md`](publish-community.md) — visibility **Public**, teks deskripsi siap tempel, review Figma.
+
 ---
 
 ## Fase C — Tim desain (tanpa Git)
