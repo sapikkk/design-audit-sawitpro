@@ -9,6 +9,7 @@
     "figma:bundle": "bash scripts/figma-bundle-dev.sh",
     "figma:open-manifest": "open -R figma-dev/manifest.json",
     "figma:setup": "npm run figma:bundle && npm run figma:fix-import && npm run figma:open-manifest",
+    "figma:team-tree": "node scripts/figma-team-tree.mjs",
     "skills:verify": "bash scripts/skills-verify.sh",
     "skills:optional": "bash scripts/skills-optional-clone.sh",
     "build": "tsc -p tsconfig.json",
