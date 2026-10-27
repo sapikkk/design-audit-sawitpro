@@ -1,6 +1,6 @@
-// DS Audit Pro — code.js (v1.2.1)
+// DS Audit Pro — code.js (v1.2.2)
 // Berjalan di sandbox Figma. Tidak ada LLM, tidak ada network, tidak ada token di config.
-console.log('[DESIGN AUDIT SAWITPRO] plugin v1.2.1 loaded');
+console.log('[DESIGN AUDIT SAWITPRO] plugin v1.2.2 loaded');
 // Semua token dan komponen ditemukan dari file aktif dan library yang di-enable.
 // Mode: audit, apply, undo (in-memory), annotate, clear-annotations, select.
 
@@ -88,7 +88,7 @@ const FILE_CATEGORY_LABEL = {
   OTHER: 'Lainnya'
 };
 
-const PLUGIN_VERSION = '1.2.1';
+const PLUGIN_VERSION = '1.2.2';
 const PLUGIN_VERSION_LABEL = '1.2';
 
 const UI_DEFAULT_W = 420;
@@ -780,7 +780,7 @@ function matchColor(hex, reg, threshold) {
   }
   return {
     matchType: 'NONE',
-    suggestion: best ? `Token terdekat «${best.name}» (selisih warna ${bestD.toFixed(2)}), tidak otomatis` : 'Tidak ada token warna'
+    suggestion: best ? `Variabel terdekat «${best.name}», warnanya masih beda` : 'Belum ada variabel warna di file'
   };
 }
 
@@ -795,7 +795,7 @@ function nearest(list, value) {
 
 function matchPx(value, list, tolerancePx) {
   if (typeof value !== 'number' || !list || !list.length) {
-    return { matchType: 'NONE', suggestion: 'Tidak ada token di file' };
+    return { matchType: 'NONE', suggestion: 'Belum ada variabel yang cocok di file' };
   }
   const tol = typeof tolerancePx === 'number' ? tolerancePx : 0;
   const rv = Math.round(value);
@@ -809,8 +809,8 @@ function matchPx(value, list, tolerancePx) {
   return {
     matchType: 'NONE',
     suggestion: near
-      ? `Token terdekat «${near.name}» (${near.px} px${delta != null ? `, selisih ${delta} px` : ''}) — tidak otomatis`
-      : 'Tidak ada token spacing/radius di file'
+      ? `Variabel terdekat «${near.name}» (${near.px} px${delta != null ? `, beda ${delta} px` : ''}), pasang manual`
+      : 'Belum ada variabel spacing atau radius di file'
   };
 }
 
@@ -1031,7 +1031,7 @@ function auditPaint(node, ctx, base, kind) {
   if (!('strokes' in node) && kind === 'strokes') return;
   if (paints === figma.mixed) {
     count(ctx, 'COLOR', false);
-    addViolation(ctx, base, 'COLOR', 'LOW', `${label} campuran, cek manual`, { field });
+    addViolation(ctx, base, 'COLOR', 'LOW', `${label} berisi beberapa warna, cek manual`, { field });
     return;
   }
   if (!Array.isArray(paints)) return;
@@ -1048,7 +1048,7 @@ function auditPaint(node, ctx, base, kind) {
   if (ok) return;
   const hex = toHex(solids[0].color);
   const m = matchColor(hex, ctx.reg, ctx.rules.nearMatchDeltaE);
-  addViolation(ctx, base, 'COLOR', 'LOW', `Warna ${label} tidak terikat variabel atau style`, {
+  addViolation(ctx, base, 'COLOR', 'LOW', `Warna ${label} belum memakai variabel`, {
     field,
     currentValue: hex,
     ...m
@@ -1079,7 +1079,7 @@ function checkSize(node, ctx, base) {
     }
     count(ctx, 'SPACING', false);
     const m = matchPx(val, ctx.reg.spacingVariables, ctx.rules.nearMatchSpacingPx);
-    addViolation(ctx, base, 'SPACING', 'LOW', `${auditFieldLabel(key)} tanpa token (${Math.round(val)} px)`, {
+    addViolation(ctx, base, 'SPACING', 'LOW', `${auditFieldLabel(key)} ${Math.round(val)} px belum pakai variabel`, {
       field: key,
       currentValue: String(Math.round(val)),
       subCategory: 'SIZE',
@@ -1128,7 +1128,7 @@ function checkSpacing(node, ctx, base) {
   const list = first.radius ? ctx.reg.radiusVariables : ctx.reg.spacingVariables;
   const m = matchPx(first.value, list, ctx.rules.nearMatchSpacingPx);
   addViolation(ctx, base, 'SPACING', 'MEDIUM',
-    `Nilai tidak standar: ${bad.map((b) => `${auditFieldLabel(b.field)} ${b.value} px`).join(', ')}`, {
+    `${bad.map((b) => `${auditFieldLabel(b.field)} ${b.value} px`).join(', ')} belum cocok dengan variabel`, {
       field: first.field,
       currentValue: String(first.value),
       subCategory: first.radius ? 'RADIUS' : 'SPACING',

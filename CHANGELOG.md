@@ -2,6 +2,14 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## 1.2.2
+
+- Tab kategori jadi chip bergaris, contoh "Semua (41)"; chip aktif berwarna hijau.
+- Tombol Kembali memakai chevron kiri.
+- Tombol aksi di kartu temuan sejajar tengah dengan isi kartu.
+- Hapus persentase "Pakai token DS", filter tingkat, dan hitungan penting/sedang/ringan.
+- Teks temuan ditulis ulang, misalnya "Padding atas 15 px belum cocok dengan variabel".
+
 ## 1.2.1
 
 - Hasil periksa dikelompokkan dengan tab kategori (Semua, Spacing & radius, Warna, dst.) lengkap dengan jumlah.
