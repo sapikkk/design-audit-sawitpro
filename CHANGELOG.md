@@ -2,6 +2,12 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## [1.0.5] — 2026-10-27
+
+### Changed
+
+- Setiap kartu temuan (tab **Periksa** dan **Perbaiki**) punya tombol **Perbaiki otomatis** atau **Perbaiki (tunjuk layer)**.
+
 ## [1.0.4] — 2026-10-27
 
 ### Changed

@@ -424,7 +424,7 @@
 
   <div class="panel on" id="p-audit">
     <div class="panel-body">
-      <p class="tab-intro">① Pilih area &nbsp;→&nbsp; ② <b>Mulai periksa</b> &nbsp;→&nbsp; ③ Klik baris untuk lihat layer</p>
+      <p class="tab-intro">① Pilih area &nbsp;→&nbsp; ② <b>Mulai periksa</b> &nbsp;→&nbsp; ③ Tiap baris: <b>Perbaiki</b> atau klik teks untuk tunjuk layer</p>
       <div class="field">
         <span class="field-label">Periksa bagian</span>
         <div class="segmented" id="scopeGroup">
@@ -477,7 +477,7 @@
 
   <div class="panel" id="p-apply">
     <div class="panel-body">
-      <p class="tab-intro">Tekan <b>Perbaiki</b> pada setiap baris. Atau <b>Perbaiki semua otomatis</b> di bawah.</p>
+      <p class="tab-intro">Setiap baris punya tombol <b>Perbaiki</b>. Yang otomatis: <b>Perbaiki otomatis</b>; sisanya: <b>Perbaiki (tunjuk layer)</b>. Atau <b>Perbaiki semua otomatis</b> di bawah.</p>
       <div id="applyStats" class="subtle" style="margin:8px 0"></div>
       <div class="btn-row">
         <button type="button" class="btn btn-primary" id="applyAll" style="flex:1">Perbaiki semua otomatis</button>
@@ -768,7 +768,7 @@
     row.className = 'row sev-' + v.severity + (v.matchType === 'EXACT' ? ' exact-row' : '');
     const idx = v._index != null ? v._index : 0;
     const showFix = !opts || opts.showFix !== false;
-    const fixLabel = v.matchType === 'EXACT' ? 'Perbaiki otomatis' : 'Tunjuk layer';
+    const fixLabel = v.matchType === 'EXACT' ? 'Perbaiki otomatis' : 'Perbaiki (tunjuk layer)';
     const fixClass = v.matchType === 'EXACT' ? 'btn btn-primary btn-fix' : 'btn btn-fix secondary-fix';
     const countBadge = v.count > 1 ? `<span class="count">×${v.count}</span>` : '';
     const token = tokenNameFrom(v) || nearestTokenFromSuggestion(v);
@@ -849,24 +849,17 @@
     const manual = audit.violations.filter((v) => v.matchType !== 'EXACT');
     statsEl.textContent = `${exact.length} plugin perbaiki · ${manual.length} Anda perbaiki sendiri`;
 
-    if (exact.length) {
+    const appendSection = (title, pred) => {
+      const slice = audit.violations.map((v, i) => ({ v, i })).filter(({ v }) => pred(v));
+      if (!slice.length) return;
       const h = document.createElement('div');
       h.className = 'section-label';
-      h.textContent = 'Plugin perbaiki otomatis';
+      h.textContent = title;
       listEl.appendChild(h);
-      audit.violations.forEach((v, i) => {
-        if (v.matchType === 'EXACT') appendFindingRow(listEl, { ...v, _index: i }, { showFix: true });
-      });
-    }
-    if (manual.length) {
-      const h2 = document.createElement('div');
-      h2.className = 'section-label';
-      h2.textContent = 'Anda perbaiki di Figma';
-      listEl.appendChild(h2);
-      audit.violations.forEach((v, i) => {
-        if (v.matchType !== 'EXACT') appendFindingRow(listEl, { ...v, _index: i }, { showFix: true });
-      });
-    }
+      slice.forEach(({ v, i }) => appendFindingRow(listEl, { ...v, _index: i }, { showFix: true }));
+    };
+    appendSection('Plugin perbaiki otomatis', (v) => v.matchType === 'EXACT');
+    appendSection('Anda perbaiki di Figma', (v) => v.matchType !== 'EXACT');
   }
 
   function renderList() {
@@ -876,7 +869,7 @@
     let items = filteredViolations();
     if ($('grouped').checked) items = groupViolations(items);
 
-    items.forEach((v) => appendFindingRow(list, v, { showFix: false }));
+    items.forEach((v) => appendFindingRow(list, v, { showFix: true }));
   }
 
   $('fCat').onchange = () => audit && renderList();
