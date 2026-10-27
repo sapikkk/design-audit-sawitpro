@@ -2,6 +2,12 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## 1.2.8
+
+- Warna: otomatis jika variabel terdekat dalam ΔE 12 (NEAR); apply ikut NEAR warna.
+- Kartu warna menampilkan hex layer → nama variabel + ΔE.
+- Aturan: nearMatchColorApplyDeltaE di rules.json.
+
 ## 1.2.7
 
 - Halaman Perbaiki: tab kategori sama seperti Periksa; filter dan Perbaiki semua otomatis mengikuti kategori aktif.

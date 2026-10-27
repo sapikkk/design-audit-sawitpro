@@ -1,6 +1,6 @@
-// DS Audit Pro — code.js (v1.2.7)
+// DS Audit Pro — code.js (v1.2.8)
 // Berjalan di sandbox Figma. Tidak ada LLM, tidak ada network, tidak ada token di config.
-console.log('[DESIGN AUDIT SAWITPRO] plugin v1.2.7 loaded');
+console.log('[DESIGN AUDIT SAWITPRO] plugin v1.2.8 loaded');
 // Semua token dan komponen ditemukan dari file aktif dan library yang di-enable.
 // Mode: audit, apply, undo (in-memory), annotate, clear-annotations, select.
 
@@ -88,7 +88,7 @@ const FILE_CATEGORY_LABEL = {
   OTHER: 'Lainnya'
 };
 
-const PLUGIN_VERSION = '1.2.7';
+const PLUGIN_VERSION = '1.2.8';
 const PLUGIN_VERSION_LABEL = '1.2';
 
 const UI_DEFAULT_W = 420;
@@ -148,6 +148,7 @@ const AUDIT_RULES = {
   },
   thresholds: { excellent: 90, warning: 75 },
   nearMatchDeltaE: 2.0,
+  nearMatchColorApplyDeltaE: 12.0,
   nearMatchSpacingPx: 1,
   namingPatterns: {
     screen: '^Screen\\/[A-Za-z0-9-]+$',
@@ -765,23 +766,41 @@ function toMatch(type, v, suggestion) {
   };
 }
 
-function matchColor(hex, reg, threshold) {
+function matchColor(hex, reg, nearDeltaE, applyDeltaE) {
   const list = reg.colorVariables;
-  const exact = list.find((v) => v.hex.toUpperCase() === hex);
-  if (exact) return toMatch('EXACT', exact, `Ikat ke ${exact.name}`);
-  const lab = rgbToLab(hexToRgb(hex));
+  const norm = (hex || '').toUpperCase();
+  const exact = list.find((v) => v.hex.toUpperCase() === norm);
+  if (exact) return { ...toMatch('EXACT', exact, `Ikat ke ${exact.name}`), colorDeltaE: 0 };
+  const lab = rgbToLab(hexToRgb(norm));
   let best = null, bestD = Infinity;
   for (const v of list) {
     const d = deltaE2000(lab, rgbToLab(hexToRgb(v.hex)));
     if (d < bestD) { bestD = d; best = v; }
   }
-  if (best && bestD <= threshold) {
-    return toMatch('NEAR', best, `Mirip «${best.name}» (selisih warna ${bestD.toFixed(2)}), perlu dicek manual`);
+  const applyMax = typeof applyDeltaE === 'number' ? applyDeltaE : nearDeltaE;
+  if (best && bestD <= applyMax) {
+    const label = bestD <= nearDeltaE
+      ? `Mirip «${best.name}» (selisih warna ${bestD.toFixed(2)})`
+      : `Variabel terdekat «${best.name}» (selisih warna ${bestD.toFixed(1)})`;
+    return { ...toMatch('NEAR', best, label), colorDeltaE: bestD };
   }
   return {
     matchType: 'NONE',
-    suggestion: best ? `Variabel terdekat «${best.name}», warnanya masih beda` : 'Belum ada variabel warna di file'
+    targetVariableId: best ? best.id : undefined,
+    targetVariableKey: best ? best.key : undefined,
+    targetVariableName: best ? best.name : undefined,
+    colorDeltaE: best ? bestD : undefined,
+    suggestion: best
+      ? `Variabel terdekat «${best.name}» (selisih warna ${bestD.toFixed(1)}), di luar batas otomatis`
+      : 'Belum ada variabel warna di file'
   };
+}
+
+function canApplyViolation(it) {
+  if (!it || !it.targetVariableKey && !it.targetVariableId) return false;
+  if (it.matchType === 'EXACT') return true;
+  if (it.category === 'COLOR' && it.matchType === 'NEAR') return true;
+  return false;
 }
 
 function nearest(list, value) {
@@ -1047,7 +1066,7 @@ function auditPaint(node, ctx, base, kind) {
   count(ctx, 'COLOR', ok);
   if (ok) return;
   const hex = toHex(solids[0].color);
-  const m = matchColor(hex, ctx.reg, ctx.rules.nearMatchDeltaE);
+  const m = matchColor(hex, ctx.reg, ctx.rules.nearMatchDeltaE, ctx.rules.nearMatchColorApplyDeltaE);
   addViolation(ctx, base, 'COLOR', 'LOW', `Warna ${label} belum memakai variabel`, {
     field,
     currentValue: hex,
@@ -1343,7 +1362,7 @@ async function runAuditInner(msg) {
   figma.ui.postMessage({ type: 'audit-result', data });
 }
 
-// ---------- Mode: apply (hanya EXACT) ----------
+// ---------- Mode: apply (EXACT + warna NEAR dalam batas ΔE) ----------
 
 async function resolveVariable(it) {
   // Kunci dulu (aman untuk library lintas file), lalu ID untuk variabel lokal.
@@ -1370,7 +1389,7 @@ async function applyChanges(items) {
   let applied = 0, skipped = 0;
 
   for (const it of items) {
-    if (it.matchType !== 'EXACT') { skipped++; continue; }
+    if (!canApplyViolation(it)) { skipped++; continue; }
     try {
       const node = await figma.getNodeByIdAsync(it.id);
       if (!node) { skipped++; continue; }
