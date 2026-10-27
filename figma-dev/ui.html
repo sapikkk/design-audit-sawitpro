@@ -605,17 +605,18 @@
   /* Pegangan ubah ukuran jendela plugin (Figma tidak punya resize native) */
   .ui-resize {
     position: fixed;
-    right: 2px;
-    bottom: 2px;
+    right: 6px;
+    bottom: 6px;
     z-index: 100;
-    width: calc(24px * var(--ui-scale, 1));
-    height: calc(24px * var(--ui-scale, 1));
+    width: calc(20px * var(--ui-scale, 1));
+    height: calc(20px * var(--ui-scale, 1));
     padding: 0;
     border: none;
     background: transparent;
     cursor: nwse-resize;
     touch-action: none;
-    opacity: 0.65;
+    opacity: 0.55;
+    pointer-events: auto;
   }
   .ui-resize:hover { opacity: 1; }
   .ui-resize:focus-visible {
@@ -1440,41 +1441,68 @@
     if (!grip) return;
     let drag = null;
     let raf = 0;
-    const send = () => {
-      raf = 0;
-      if (drag && drag.next) {
-        post({ type: 'resize-ui', width: drag.next.width, height: drag.next.height });
-        drag.next = null;
-      }
-    };
-    // Selisih posisi layar dipakai (bukan posisi di iframe) agar tidak goyang saat panel berubah ukuran.
-    grip.onpointerdown = (e) => {
-      e.preventDefault();
-      drag = { x: e.screenX, y: e.screenY, w: window.innerWidth, h: window.innerHeight, next: null };
-      grip.setPointerCapture(e.pointerId);
-    };
-    grip.onpointermove = (e) => {
-      if (!drag) return;
-      drag.next = clampPanelSize(drag.w + (e.screenX - drag.x), drag.h + (e.screenY - drag.y));
-      if (!raf) raf = requestAnimationFrame(send);
-    };
-    const end = (e) => {
-      try { grip.releasePointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+
+    const stopDrag = () => {
+      document.removeEventListener('pointermove', onMove, true);
+      document.removeEventListener('pointerup', onEnd, true);
+      document.removeEventListener('pointercancel', onEnd, true);
+      document.body.style.userSelect = '';
       if (raf) { cancelAnimationFrame(raf); raf = 0; }
-      send();
       drag = null;
     };
-    grip.onpointerup = end;
-    grip.onpointercancel = end;
-    grip.ondblclick = () => post({ type: 'resize-ui', width: 420, height: 760 });
+
+    const flush = () => {
+      raf = 0;
+      if (!drag) return;
+      post({ type: 'resize-ui', width: drag.lastW, height: drag.lastH });
+    };
+
+    const onMove = (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      if (!(e.buttons & 1)) { onEnd(e); return; }
+      const nw = clampPanelSize(
+        drag.startW + (e.screenX - drag.startX),
+        drag.startH + (e.screenY - drag.startY)
+      );
+      if (nw.width === drag.lastW && nw.height === drag.lastH) return;
+      drag.lastW = nw.width;
+      drag.lastH = nw.height;
+      if (!raf) raf = requestAnimationFrame(flush);
+    };
+
+    const onEnd = (e) => {
+      if (!drag || (e && e.pointerId !== drag.id)) return;
+      flush();
+      stopDrag();
+    };
+
+    grip.onpointerdown = (e) => {
+      if (e.button !== 0 || drag) return;
+      e.preventDefault();
+      e.stopPropagation();
+      drag = {
+        id: e.pointerId,
+        startX: e.screenX,
+        startY: e.screenY,
+        startW: window.innerWidth,
+        startH: window.innerHeight,
+        lastW: window.innerWidth,
+        lastH: window.innerHeight
+      };
+      document.body.style.userSelect = 'none';
+      document.addEventListener('pointermove', onMove, true);
+      document.addEventListener('pointerup', onEnd, true);
+      document.addEventListener('pointercancel', onEnd, true);
+    };
+
+    grip.ondblclick = (e) => {
+      e.preventDefault();
+      post({ type: 'resize-ui', width: 420, height: 760 });
+    };
   }
 
   syncUiScale();
-  if (typeof ResizeObserver !== 'undefined') {
-    new ResizeObserver(syncUiScale).observe(document.documentElement);
-  } else {
-    window.addEventListener('resize', syncUiScale);
-  }
+  window.addEventListener('resize', syncUiScale);
   initPanelResize();
   initSplash();
   showView('home');

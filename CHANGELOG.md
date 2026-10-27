@@ -2,6 +2,11 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## 1.2.5
+
+- Resize hanya saat klik-tahan dan tarik pegangan; listener dipasang di document selama drag, bukan permanen di pegangan.
+- Hapus ResizeObserver pada skala UI (hanya window resize) supaya konten yang berubah tidak membuat panel terlihat bergeser sendiri.
+
 ## 1.2.4
 
 - Perbaiki resize panel: ukuran dihitung dari selisih posisi kursor di layar, jadi tidak goyang atau macet saat panel berubah.
