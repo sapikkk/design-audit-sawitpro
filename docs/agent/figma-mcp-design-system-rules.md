@@ -14,18 +14,40 @@ Dokumen ini untuk agent Cursor (CLAUDE.md / rules) saat mengubah plugin audit at
 
 ### Nama variabel UI (DS 3.0)
 
-| Token UI | Variabel Figma | Hex (resolve 2026-10-26) |
-|----------|----------------|--------------------------|
-| `--brand` / `--header` | `Brand/primary` · `Primary/greenBright-800` | `#007200` |
-| `--primary` / tombol | `Primary/greenBright-500` | `#19A80B` |
-| `--btn-hover` | `Primary/greenBright-600` | `#009F0C` |
+| Token UI | Variabel Figma | Hex |
+|----------|----------------|-----|
+| `--brand` / `--primary` / `--header` | `Brand/primary` | `#007200` |
 | `--brand-secondary` | `Brand/Secondary` | `#E5BE02` |
-| `--background` | `Primary/greenBright-50` | `#E5F3E6` |
-| `--card` / surface | `Neutral/Neutral-0` | `#FFFFFF` |
-| `--border` | `Primary/greenBright-200` | `#AEE0AF` |
+| `--background` / `--card` | `Surface/Base/mainWhite` | `#FFFFFF` |
+| `--muted` | `Surface/Neutral/base1` | `#F5F5F5` |
+| `--track` | `Surface/Neutral/base2` | `#EBEBEB` |
+| `--border` | `Stroke/Low` | `#DDDDDD` |
+| `--input` | `Stroke/Medium` | `#A3A3A3` |
 | `--foreground` | `TextIcon/Black/primary` | `#1F1F1F` |
-| muted / subtle | `TextIcon/Black/secondary` · `tertiary` | `#404040` · `#7A7A7A` |
+| teks sekunder / tersier | `TextIcon/Black/secondary` · `tertiary` | `#404040` · `#7A7A7A` |
+| teks di atas hijau | `TextIcon/White/primary` | `#F7F7F8` |
 | `--danger` / `--warning` | `Utility/Danger` · `Utility/Warning` | `#AB0000` · `#A04200` |
+
+### Token non-warna (library `2.0 Mobile Design System - SawitPRO`)
+
+| Kelompok | Nama variabel | Nilai |
+|----------|---------------|-------|
+| Radius | `Roundness/xs` · `sm` · `md` · `lg` · `xl` | 4 · 8 · 12 · 24 · 100 |
+| Font | `Font/Font size/*` | 12 · 14 · 16 · 18 · 20 · 24 … |
+| Spacing | `Main System/*` | skala spacing DS |
+| Typeface | Inter | Bold untuk tombol, Regular untuk isi |
+
+### Komponen DS → CSS plugin (diukur dari atom / molecule / organism)
+
+| Komponen DS | Spesifikasi | Dipakai di UI |
+|-------------|-------------|---------------|
+| Button | pill r100, padding 8/12, gap 6, Inter Bold 12 (lg: 12/16, 14) | `.btn`, `.btn-lg` |
+| Chips | r8, padding 4/12 | `.badge`, chip temuan |
+| Progress bar | tinggi 8, r4 | `.progress` |
+| Tab | padding 12/16, garis bawah `Stroke/Primary` | `.tabs` |
+| Tabs V2 (segmented) | wadah r12 padding 4, item r8 padding 8/16 | `.segmented` |
+| Dropdown / field | r12, padding 12/16, tinggi 48 | `input`, `select` |
+| Toast | r8, padding 16 | `.notice` |
 
 **Transformasi:** Tidak ada Style Dictionary di repo. Plugin resolve alias variabel lewat `resolveValue()` (sama seperti audit).
 

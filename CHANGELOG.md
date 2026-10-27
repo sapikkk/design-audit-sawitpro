@@ -2,6 +2,20 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## [1.1.0] — 2026-10-27
+
+### Added
+
+- Progress per kategori saat memuat token: "Sedang memuat spacing & padding 12/40", juga untuk warna, radius, font, text style.
+- Panel **Token yang dimuat** dan **Sudah diperiksa di layer** selama audit; ringkasan hasil menampilkan jumlah token yang diaudit.
+- Registry mengenali nama token DS (`Roundness/*`, `Font/Font size/*`, `Main System/*`) sebagai radius, font, spacing.
+
+### Changed
+
+- Checkbox jadi **Muat ulang token dari library** dengan keterangan.
+- Tab **Alat**: Lepas variabel dan Ganti variabel disembunyikan secara default, tombol **Tampilkan** / **Sembunyikan**. Daftar variabel dimuat saat Ganti variabel dibuka.
+- UI diselaraskan dengan komponen DS (atom/molecule/organism): font Inter, tombol pill, radius 4/8/12, border `Stroke/Low`, field 48px, progress 8px, tema dari `Brand/primary` dan `Surface/*`. Detail di `docs/agent/figma-mcp-design-system-rules.md`.
+
 ## [1.0.8] — 2026-10-27
 
 ### Fixed

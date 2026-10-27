@@ -1,6 +1,6 @@
-// DS Audit Pro — code.js (v1.0.8)
+// DS Audit Pro — code.js (v1.1.0)
 // Berjalan di sandbox Figma. Tidak ada LLM, tidak ada network, tidak ada token di config.
-console.log('[DESIGN AUDIT SAWITPRO] plugin v1.0.8 loaded');
+console.log('[DESIGN AUDIT SAWITPRO] plugin v1.1.0 loaded');
 // Semua token dan komponen ditemukan dari file aktif dan library yang di-enable.
 // Mode: audit, apply, undo (in-memory), annotate, clear-annotations, select.
 
@@ -11,19 +11,41 @@ const NO_TOKENS_TAG = /\[no-tokens\]/i;
 const DEFAULT_NAME = /^(Frame|Rectangle|Group|Vector|Text|Ellipse) \d+$/;
 const SPACING_FIELDS = ['itemSpacing', 'paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom'];
 const RADIUS_CORNERS = ['topLeftRadius', 'topRightRadius', 'bottomLeftRadius', 'bottomRightRadius'];
-/** Cocokkan nama variabel DS (path `Padding/...`, `Spacing/...`, dll.). */
-const SPACING_NAME = /(?:^|[\/])(spacing|space|gap|padding|margin|inset|size|dimension|grid|stack|gutter)/i;
-const RADIUS_NAME = /(?:^|[\/])(radius|corner|rounded|radii|border-radius)/i;
-const TYPO_FLOAT_NAME = /(?:^|[\/])(font-size|fontsize|line-height|lineheight|letter-spacing|leading|typography|type-scale)/i;
-
-function isRadiusTokenName(name) {
-  return RADIUS_NAME.test(name || '');
-}
+/**
+ * Nama variabel FLOAT di DS SawitPRO (2.0 Mobile, hex/nilai diukur via MCP 2026-10-27):
+ * Radius/rounded-*, Roundness/*-Radius-*, Font/Font size/*, Font/Line Height/*,
+ * Font/Weight/*, Main System/8px, Padding/Mobile/Main, Devices/Mobile.
+ */
+const RADIUS_NAME = /(radius|roundness|rounded|corner)/i;
+const FONT_NAME = /(?:^|\/)font(?:\/|\s|$)|font[\s_-]?size|line[\s_-]?heigh|letter[\s_-]?spacing/i;
 
 function classifyFloatVariable(name) {
-  if (isRadiusTokenName(name)) return 'radius';
-  if (TYPO_FLOAT_NAME.test(name || '')) return 'typography';
-  return 'spacing';
+  const n = name || '';
+  if (RADIUS_NAME.test(n)) return { kind: 'radius', role: 'radius' };
+  if (FONT_NAME.test(n)) {
+    if (/weight/i.test(n)) return { kind: 'typography', role: 'weight' };
+    if (/line[\s_-]?heigh/i.test(n)) return { kind: 'typography', role: 'lineHeight' };
+    if (/letter[\s_-]?spacing/i.test(n)) return { kind: 'typography', role: 'letterSpacing' };
+    if (/font[\s_-]?size/i.test(n)) return { kind: 'typography', role: 'fontSize' };
+    return { kind: 'typography', role: 'other' };
+  }
+  return { kind: 'spacing', role: 'spacing' };
+}
+
+/** Urutan dan label progres registry (tampil di panel Periksa). */
+const REGISTRY_STEPS = [
+  { id: 'local', label: 'Variabel di file ini' },
+  { id: 'color', label: 'Warna' },
+  { id: 'spacing', label: 'Spacing & padding' },
+  { id: 'radius', label: 'Radius' },
+  { id: 'typography', label: 'Font & typography' },
+  { id: 'textStyle', label: 'Text style' }
+];
+
+function emptyRegistrySteps() {
+  const steps = {};
+  for (const s of REGISTRY_STEPS) steps[s.id] = { label: s.label, state: 'pending', done: 0, total: 0 };
+  return steps;
 }
 const ANNOTATION_STYLE = {
   SPACING: { color: '#FF9800', prefix: 'SPACE' },
@@ -66,7 +88,7 @@ const FILE_CATEGORY_LABEL = {
   OTHER: 'Lainnya'
 };
 
-const PLUGIN_VERSION = '1.0.8';
+const PLUGIN_VERSION = '1.1.0';
 const PLUGIN_VERSION_LABEL = '1.0';
 
 /** Aturan audit (sumber: rules.json di repo — disematkan, tanpa upload file). */
@@ -226,18 +248,41 @@ function shouldImportLibraryMeta(lv) {
   return false;
 }
 
-async function registryProgress(loaded, total, label, silent) {
+/** Kirim status per kategori token ke UI (Periksa → daftar «Yang sedang dimuat»). */
+async function registryProgress(steps, current, silent) {
   if (!silent) {
     figma.ui.postMessage({
       type: 'progress',
       done: 0,
       phase: 'registry',
-      registryLoaded: loaded,
-      registryTotal: total,
-      registryLabel: label || ''
+      registrySteps: JSON.parse(JSON.stringify(steps)),
+      registryCurrent: current || ''
     });
   }
   await sleep();
+}
+
+function stepForLibraryVar(lv) {
+  if (lv.resolvedType === 'COLOR') return 'color';
+  return classifyFloatVariable(lv.name).kind;
+}
+
+function stepsFromRegistry(reg) {
+  const steps = emptyRegistrySteps();
+  const counts = {
+    color: reg.colorVariables.length,
+    spacing: reg.spacingVariables.length,
+    radius: reg.radiusVariables.length,
+    typography: (reg.typographyVariables || []).length,
+    textStyle: reg.textStyles.length
+  };
+  for (const id of Object.keys(counts)) {
+    steps[id].state = 'done';
+    steps[id].done = counts[id];
+    steps[id].total = counts[id];
+  }
+  steps.local.state = 'done';
+  return steps;
 }
 
 function cloneRegistryTokens(src) {
@@ -271,17 +316,26 @@ async function buildRegistryUncached(scope, silent) {
       if (v.resolvedType === 'COLOR' && val && typeof val === 'object' && 'r' in val) {
         reg.colorVariables.push({ ...base, hex: toHex(val) });
       } else if (v.resolvedType === 'FLOAT' && typeof val === 'number') {
-        const kind = classifyFloatVariable(v.name);
-        const row = { ...base, px: val };
-        if (kind === 'radius') reg.radiusVariables.push(row);
-        else if (kind === 'typography') reg.typographyVariables.push(row);
+        const cls = classifyFloatVariable(v.name);
+        const row = { ...base, px: val, role: cls.role };
+        if (cls.kind === 'radius') reg.radiusVariables.push(row);
+        else if (cls.kind === 'typography') reg.typographyVariables.push(row);
         else reg.spacingVariables.push(row);
       }
     } catch (e) { /* variabel rusak / alias putus */ }
   }
 
-  await registryProgress(0, 0, 'local', silent);
-  for (const v of await figma.variables.getLocalVariablesAsync()) await addVar(v, 'local');
+  const steps = emptyRegistrySteps();
+
+  const locals = await figma.variables.getLocalVariablesAsync();
+  steps.local.total = locals.length;
+  steps.local.state = locals.length ? 'loading' : 'done';
+  await registryProgress(steps, 'local', silent);
+  for (const v of locals) {
+    await addVar(v, 'local');
+    steps.local.done++;
+  }
+  steps.local.state = 'done';
 
   let libCols = [];
   try {
@@ -306,18 +360,38 @@ async function buildRegistryUncached(scope, silent) {
     }
   }
 
+  const stepOrder = ['color', 'spacing', 'radius', 'typography'];
+  importQueue.sort((x, y) => stepOrder.indexOf(stepForLibraryVar(x)) - stepOrder.indexOf(stepForLibraryVar(y)));
+  for (const lv of importQueue) steps[stepForLibraryVar(lv)].total++;
+
   const totalLib = importQueue.length;
   let loadedLib = 0;
+  let sinceEmit = 0;
+  let lastStep = '';
   for (const lv of importQueue) {
+    const sid = stepForLibraryVar(lv);
+    const st = steps[sid];
+    if (st.state === 'pending') st.state = 'loading';
     loadedLib++;
+    sinceEmit++;
     if (loadedLib % 12 === 0) await sleep();
-    if (loadedLib === 1 || loadedLib % 60 === 0 || loadedLib === totalLib) {
-      await registryProgress(loadedLib, totalLib, 'library', silent);
+    if (sid !== lastStep || sinceEmit >= 15) {
+      lastStep = sid;
+      sinceEmit = 0;
+      await registryProgress(steps, sid, silent);
     }
     try {
       const v = await figma.variables.importVariableByKeyAsync(lv.key);
       await addVar(v, 'library');
     } catch (e) { /* lewati */ }
+    st.done++;
+    if (st.done >= st.total) {
+      st.state = 'done';
+      await registryProgress(steps, sid, silent);
+    }
+  }
+  for (const id of stepOrder) {
+    if (steps[id].total === 0) steps[id].state = 'done';
   }
 
   const seenStyleKeys = new Set();
@@ -336,8 +410,7 @@ async function buildRegistryUncached(scope, silent) {
     });
   }
 
-  for (const s of await figma.getLocalTextStylesAsync()) pushTextStyle(s, 'local');
-
+  const localStyles = await figma.getLocalTextStylesAsync();
   let libStyles = [];
   try {
     libStyles = await figma.teamLibrary.getAvailableLibraryStylesAsync();
@@ -345,19 +418,38 @@ async function buildRegistryUncached(scope, silent) {
     reg.notes.push('Library text style tidak tersedia (permission teamlibrary).');
   }
   const textStyleQueue = libStyles.filter((ls) => ls && ls.key && ls.type === 'TEXT');
+  steps.textStyle.total = localStyles.length + textStyleQueue.length;
+  steps.textStyle.state = steps.textStyle.total ? 'loading' : 'done';
+  await registryProgress(steps, 'textStyle', silent);
+
+  for (const st of localStyles) {
+    pushTextStyle(st, 'local');
+    steps.textStyle.done++;
+  }
   let loadedStyles = 0;
   for (const ls of textStyleQueue) {
     loadedStyles++;
-    if (loadedStyles % 8 === 0) await sleep();
+    if (loadedStyles % 8 === 0) {
+      await sleep();
+      await registryProgress(steps, 'textStyle', silent);
+    }
     try {
-      const s = await figma.importStyleByKeyAsync(ls.key);
-      if (s && s.type === 'TEXT') pushTextStyle(s, 'library');
+      const st = await figma.importStyleByKeyAsync(ls.key);
+      if (st && st.type === 'TEXT') pushTextStyle(st, 'library');
     } catch (e) { /* lewati style yang gagal diimpor */ }
+    steps.textStyle.done++;
   }
+  steps.textStyle.state = 'done';
 
   const comps = await buildComponentIndex(scope);
   reg.componentKeys = comps.componentKeys;
   reg.componentNames = comps.componentNames;
+
+  const finalSteps = stepsFromRegistry(reg);
+  finalSteps.local.total = steps.local.total;
+  finalSteps.local.done = steps.local.done;
+  await registryProgress(finalSteps, 'done', silent);
+  reg.stepsSummary = finalSteps;
 
   reg.notes.push('Komponen library terdeteksi lewat instance; text style library diimpor untuk typography.');
   if (totalLib > 0 || loadedStyles > 0) {
@@ -387,7 +479,7 @@ async function registryFromTokenCache(scope, fileKey, cacheKey, silent) {
   };
   registryCache = reg;
   registryCacheKey = cacheKey;
-  await registryProgress(1, 1, 'cache', silent);
+  await registryProgress(stepsFromRegistry(reg), 'cache', silent);
   return reg;
 }
 
@@ -407,7 +499,7 @@ async function buildRegistry(opts) {
   }
 
   if (!force && registryCache && registryCacheKey === cacheKey) {
-    await registryProgress(1, 1, 'cache', silent);
+    await registryProgress(stepsFromRegistry(registryCache), 'cache', silent);
     return registryCache;
   }
   if (!force && registryTokenCache && registryTokenCacheKey === fileKey) {
@@ -461,19 +553,24 @@ function warmRegistryInBackground() {
   return registryWarmupPromise;
 }
 
-/** Tema UI dari library **1. DS 3.0: Color** (hex diukur MCP 2026-10-26 dari file intern). */
+/**
+ * Tema UI plugin — disamakan dengan komponen DS (Button, Tabs, Dropdown, Chips, Toast).
+ * Nilai diukur MCP 2026-10-27: Brand/primary, TextIcon/Black/*, Stroke/*, Surface/Neutral/*.
+ */
 const UI_THEME_FALLBACK = {
   brand: '#007200',
   brandSecondary: '#E5BE02',
   bg: '#FFFFFF',
   surface: '#FFFFFF',
-  border: '#E6E6E6',
+  muted: '#F5F5F5',
+  track: '#EBEBEB',
+  border: '#DDDDDD',
+  inputBorder: '#A3A3A3',
   text: '#1F1F1F',
   textMuted: '#404040',
   textSubtle: '#7A7A7A',
   textInverse: '#F7F7F8',
-  btn: '#19A80B',
-  btnHover: '#009F0C',
+  btn: '#007200',
   danger: '#AB0000',
   warning: '#A04200',
   header: '#007200',
@@ -483,18 +580,20 @@ const UI_THEME_FALLBACK = {
 const UI_THEME_VAR_MAP = {
   brand: 'Brand/primary',
   brandSecondary: 'Brand/Secondary',
-  bg: 'Primary/greenBright-50',
-  surface: 'Neutral/Neutral-0',
-  border: 'Primary/greenBright-200',
+  bg: 'Surface/Base/mainWhite',
+  surface: 'Surface/Base/mainWhite',
+  muted: 'Surface/Neutral/base1',
+  track: 'Surface/Neutral/base2',
+  border: 'Stroke/Low',
+  inputBorder: 'Stroke/Medium',
   text: 'TextIcon/Black/primary',
   textMuted: 'TextIcon/Black/secondary',
   textSubtle: 'TextIcon/Black/tertiary',
   textInverse: 'TextIcon/Black/white',
-  btn: 'Primary/greenBright-500',
-  btnHover: 'Primary/greenBright-600',
+  btn: 'Brand/primary',
   danger: 'Utility/Danger',
   warning: 'Utility/Warning',
-  header: 'Primary/greenBright-800'
+  header: 'Brand/primary'
 };
 
 async function hexForVar(v) {
@@ -737,7 +836,8 @@ function checkTypography(node, ctx, base) {
   count(ctx, 'TYPOGRAPHY', ok);
   if (ok) return;
   if (node.fontSize !== figma.mixed && typeof node.fontSize === 'number') {
-    const fontMatch = matchPx(node.fontSize, ctx.reg.typographyVariables);
+    const fontTokens = (ctx.reg.typographyVariables || []).filter((v) => v.role === 'fontSize');
+    const fontMatch = matchPx(node.fontSize, fontTokens);
     if (fontMatch.matchType === 'EXACT') {
       addViolation(ctx, base, 'TYPOGRAPHY', 'MEDIUM', 'Font size belum terikat variabel typography', {
         field: 'fontSize',
@@ -988,6 +1088,17 @@ async function checkNode(node, ctx, screen, isScreen) {
   await checkVariableBindings(node, ctx, base);
 }
 
+/** Ringkas hitungan periksa per jenis token untuk panel «Sedang diperiksa». */
+function scanSnapshot(cats) {
+  const pick = (id) => ({ total: cats[id].total, failed: cats[id].total - cats[id].passed });
+  return {
+    COLOR: pick('COLOR'),
+    SPACING: pick('SPACING'),
+    TYPOGRAPHY: pick('TYPOGRAPHY'),
+    VARIABLE: pick('VARIABLE')
+  };
+}
+
 async function walk(node, ctx, screen) {
   if (node.visible === false) {
     ctx.hidden++;
@@ -998,8 +1109,15 @@ async function walk(node, ctx, screen) {
     return;
   }
   ctx.count++;
-  if (ctx.count % 500 === 0) {
-    figma.ui.postMessage({ type: 'progress', done: ctx.count });
+  if (ctx.count % 500 === 0) await sleep();
+  if (ctx.count % 80 === 0 && Date.now() - ctx.lastEmit > 180) {
+    ctx.lastEmit = Date.now();
+    figma.ui.postMessage({
+      type: 'progress',
+      done: ctx.count,
+      phase: 'scan',
+      scanCats: scanSnapshot(ctx.cats)
+    });
     await sleep();
   }
   const isTop = node.parent && node.parent.type === 'PAGE';
@@ -1049,7 +1167,8 @@ function variableUsageSummary(reg, usedVariableIds) {
   const all = [
     ...reg.colorVariables,
     ...reg.spacingVariables,
-    ...reg.radiusVariables
+    ...reg.radiusVariables,
+    ...(reg.typographyVariables || [])
   ];
   const defined = all.length;
   let usedCount = 0;
@@ -1077,13 +1196,13 @@ async function runAuditInner(msg) {
   figma.ui.postMessage({ type: 'progress', done: 0, phase: 'registry' });
   const rules = AUDIT_RULES;
   const reg = await buildRegistry({ scope: msg.scope || 'page', force: msg.refreshRegistry === true });
-  figma.ui.postMessage({ type: 'progress', done: 0, phase: 'scan' });
 
   const cats = {};
   for (const c of CATEGORIES) cats[c] = { total: 0, passed: 0 };
+  figma.ui.postMessage({ type: 'progress', done: 0, phase: 'scan', scanCats: scanSnapshot(cats) });
   const ctx = {
     rules, reg, cats, violations: [], hidden: 0, count: 0, unresolved: 0,
-    page: '', pageNames: [], usedVariableIds: new Set(), noTokensSkipped: 0
+    page: '', pageNames: [], usedVariableIds: new Set(), noTokensSkipped: 0, lastEmit: 0
   };
 
   if (msg.scope === 'selection') {
