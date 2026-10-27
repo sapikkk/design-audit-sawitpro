@@ -2,6 +2,12 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## [1.0.7] — 2026-10-27
+
+### Fixed
+
+- Logo SawitPRO di header panel: disematkan sebagai **data URI** di `ui.html` (path `icon.png` tidak dimuat di iframe Figma).
+
 ## [1.0.6] — 2026-10-27
 
 ### Changed

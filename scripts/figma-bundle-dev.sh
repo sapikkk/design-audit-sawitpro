@@ -12,6 +12,7 @@ if [[ -f "$ICON_SRC" ]]; then
   sips -z 72 72 "$ICON_SRC" --out "$ROOT/prompt/brand-icon.png" >/dev/null
 fi
 
+node "$ROOT/scripts/embed-ui-logo.mjs"
 cp "$ROOT/prompt/code.js" "$OUT/code.js"
 cp "$ROOT/prompt/ui.html" "$OUT/ui.html"
 cp "$ROOT/icon.png" "$OUT/icon.png"
