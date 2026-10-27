@@ -2,6 +2,13 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## [1.1.1] — 2026-10-27
+
+### Changed
+
+- UI tanpa kode mesin: badge hasil (mis. **Perlu perhatian**), filter kategori, teks temuan, dan notifikasi alat dalam Bahasa Indonesia.
+- Panel responsif: font, tombol, field, dan radius mengikuti `--ui-scale` saat jendela plugin diperbesar/diperkecil (acuan 420×760).
+
 ## [1.1.0] — 2026-10-27
 
 ### Added

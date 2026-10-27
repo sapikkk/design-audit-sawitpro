@@ -1,6 +1,6 @@
-// DS Audit Pro — code.js (v1.1.0)
+// DS Audit Pro — code.js (v1.1.1)
 // Berjalan di sandbox Figma. Tidak ada LLM, tidak ada network, tidak ada token di config.
-console.log('[DESIGN AUDIT SAWITPRO] plugin v1.1.0 loaded');
+console.log('[DESIGN AUDIT SAWITPRO] plugin v1.1.1 loaded');
 // Semua token dan komponen ditemukan dari file aktif dan library yang di-enable.
 // Mode: audit, apply, undo (in-memory), annotate, clear-annotations, select.
 
@@ -38,8 +38,8 @@ const REGISTRY_STEPS = [
   { id: 'color', label: 'Warna' },
   { id: 'spacing', label: 'Spacing & padding' },
   { id: 'radius', label: 'Radius' },
-  { id: 'typography', label: 'Font & typography' },
-  { id: 'textStyle', label: 'Text style' }
+  { id: 'typography', label: 'Font & tipografi' },
+  { id: 'textStyle', label: 'Gaya teks' }
 ];
 
 function emptyRegistrySteps() {
@@ -88,8 +88,27 @@ const FILE_CATEGORY_LABEL = {
   OTHER: 'Lainnya'
 };
 
-const PLUGIN_VERSION = '1.1.0';
-const PLUGIN_VERSION_LABEL = '1.0';
+const PLUGIN_VERSION = '1.1.1';
+const PLUGIN_VERSION_LABEL = '1.1';
+
+/** Label properti Figma untuk teks temuan (bukan identifier API). */
+function auditFieldLabel(field) {
+  const map = {
+    itemSpacing: 'jarak antar item',
+    paddingLeft: 'padding kiri',
+    paddingRight: 'padding kanan',
+    paddingTop: 'padding atas',
+    paddingBottom: 'padding bawah',
+    width: 'lebar',
+    height: 'tinggi',
+    fontSize: 'ukuran font',
+    topLeftRadius: 'radius sudut',
+    fills: 'isi warna',
+    strokes: 'garis tepi',
+    textStyleId: 'gaya teks'
+  };
+  return map[field] || field;
+}
 
 /** Aturan audit (sumber: rules.json di repo — disematkan, tanpa upload file). */
 const AUDIT_RULES = {
@@ -717,11 +736,11 @@ function matchColor(hex, reg, threshold) {
     if (d < bestD) { bestD = d; best = v; }
   }
   if (best && bestD <= threshold) {
-    return toMatch('NEAR', best, `Mirip ${best.name} (ΔE ${bestD.toFixed(2)}), perlu review manual`);
+    return toMatch('NEAR', best, `Mirip «${best.name}» (selisih warna ${bestD.toFixed(2)}), perlu dicek manual`);
   }
   return {
     matchType: 'NONE',
-    suggestion: best ? `Token terdekat ${best.name} (ΔE ${bestD.toFixed(2)}), tidak otomatis` : 'Tidak ada token warna'
+    suggestion: best ? `Token terdekat «${best.name}» (selisih warna ${bestD.toFixed(2)}), tidak otomatis` : 'Tidak ada token warna'
   };
 }
 
@@ -786,7 +805,7 @@ function checkNaming(node, ctx, base, isScreen) {
   else if (node.type === 'TEXT') pattern = p.text;
   if (ok && pattern && !new RegExp(pattern).test(node.name)) {
     ok = false;
-    issue = 'Nama tidak sesuai semantic-layer';
+    issue = 'Nama tidak sesuai konvensi penamaan';
   }
   count(ctx, 'NAMING', ok);
   if (!ok) addViolation(ctx, base, 'NAMING', 'MEDIUM', issue);
@@ -796,7 +815,7 @@ function checkDetached(node, ctx, base) {
   const names = ctx.reg.componentNames;
   const match = names.some((n) => node.name === n || node.name.startsWith(n + ' ') || node.name.startsWith(n + '/'));
   count(ctx, 'COMPONENT', !match);
-  if (match) addViolation(ctx, base, 'COMPONENT', 'HIGH', 'Dugaan detached, verifikasi manual');
+  if (match) addViolation(ctx, base, 'COMPONENT', 'HIGH', 'Mungkin lepas dari komponen, cek manual');
 }
 
 // Instance sah = main component berasal dari library (remote).
@@ -839,7 +858,7 @@ function checkTypography(node, ctx, base) {
     const fontTokens = (ctx.reg.typographyVariables || []).filter((v) => v.role === 'fontSize');
     const fontMatch = matchPx(node.fontSize, fontTokens);
     if (fontMatch.matchType === 'EXACT') {
-      addViolation(ctx, base, 'TYPOGRAPHY', 'MEDIUM', 'Font size belum terikat variabel typography', {
+      addViolation(ctx, base, 'TYPOGRAPHY', 'MEDIUM', 'Ukuran font belum pakai variabel tipografi', {
         field: 'fontSize',
         currentValue: String(node.fontSize),
         subCategory: 'FONT',
@@ -855,7 +874,7 @@ function checkTypography(node, ctx, base) {
   const extra = style
     ? { matchType: 'EXACT', targetStyleId: style.id, targetStyleKey: style.key, targetVariableName: style.name, suggestion: `Ikat ke ${style.name}` }
     : { suggestion: 'Tidak ada text style di file yang cocok' };
-  addViolation(ctx, base, 'TYPOGRAPHY', 'MEDIUM', 'Teks tidak menggunakan Text Style', {
+  addViolation(ctx, base, 'TYPOGRAPHY', 'MEDIUM', 'Teks belum memakai gaya teks (Text Style)', {
     field: 'textStyleId',
     currentValue: fontStr,
     ...extra
@@ -903,7 +922,7 @@ async function checkVariableBindings(node, ctx, base) {
       } catch (e) { /* orphan */ }
       if (!v) {
         count(ctx, 'VARIABLE', false);
-        addViolation(ctx, base, 'VARIABLE', 'HIGH', `Bind variabel orphan (${field})`, {
+        addViolation(ctx, base, 'VARIABLE', 'HIGH', `Variabel terikat tidak ditemukan (${auditFieldLabel(field)})`, {
           field,
           subCategory: 'ORPHAN',
           targetVariableId: entry.id
@@ -1009,7 +1028,7 @@ function checkSize(node, ctx, base) {
     }
     count(ctx, 'SPACING', false);
     const m = matchPx(val, ctx.reg.spacingVariables);
-    addViolation(ctx, base, 'SPACING', 'LOW', `${key} raw (${Math.round(val)}px)`, {
+    addViolation(ctx, base, 'SPACING', 'LOW', `${auditFieldLabel(key)} tanpa token (${Math.round(val)} px)`, {
       field: key,
       currentValue: String(Math.round(val)),
       subCategory: 'SIZE',
@@ -1058,7 +1077,7 @@ function checkSpacing(node, ctx, base) {
   const list = first.radius ? ctx.reg.radiusVariables : ctx.reg.spacingVariables;
   const m = matchPx(first.value, list);
   addViolation(ctx, base, 'SPACING', 'MEDIUM',
-    `Nilai tidak standar: ${bad.map((b) => `${b.field}=${b.value}`).join(', ')}`, {
+    `Nilai tidak standar: ${bad.map((b) => `${auditFieldLabel(b.field)} ${b.value} px`).join(', ')}`, {
       field: first.field,
       currentValue: String(first.value),
       subCategory: first.radius ? 'RADIUS' : 'SPACING',
@@ -1531,7 +1550,7 @@ async function detachVariables(scope) {
   for (const root of roots) await walkDetach(root, tally);
   figma.ui.postMessage({
     type: 'notice',
-    text: `Detach selesai: ${tally.fields} bind pada ${tally.nodes} node.`
+    text: `Lepas variabel selesai: ${tally.fields} kaitan pada ${tally.nodes} layer.`
   });
 }
 
@@ -1618,7 +1637,7 @@ async function remapVariable(scope, fromKey, toKey) {
   if (scope === 'selection') {
     roots = figma.currentPage.selection.slice();
     if (roots.length === 0) {
-      figma.ui.postMessage({ type: 'notice', text: 'Pilih layer untuk remap.' });
+      figma.ui.postMessage({ type: 'notice', text: 'Pilih layer untuk ganti variabel.' });
       return;
     }
   } else {
@@ -1629,7 +1648,7 @@ async function remapVariable(scope, fromKey, toKey) {
   for (const root of roots) await walkRemap(root, fromVar.id, toVar, tally);
   figma.ui.postMessage({
     type: 'notice',
-    text: `Remap ${fromVar.name} → ${toVar.name}: ${tally.fields} bind diperbarui.`
+    text: `Ganti variabel «${fromVar.name}» → «${toVar.name}»: ${tally.fields} kaitan diperbarui.`
   });
 }
 

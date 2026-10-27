@@ -13,13 +13,14 @@
    * Warna: Brand/primary, TextIcon/Black/*, Stroke/Low·Medium, Surface/Neutral/base1·base2
    */
   :root {
-    --font-size-xsmall: 12px;
-    --font-size-small: 14px;
-    --font-size-title: 16px;
-    --font-size-score: 24px;
-    --size-medium: 32px;
-    --size-large: 40px;
-    --size-field: 48px;
+    --ui-scale: 1;
+    --font-size-xsmall: calc(12px * var(--ui-scale));
+    --font-size-small: calc(14px * var(--ui-scale));
+    --font-size-title: calc(16px * var(--ui-scale));
+    --font-size-score: calc(24px * var(--ui-scale));
+    --size-medium: calc(32px * var(--ui-scale));
+    --size-large: calc(40px * var(--ui-scale));
+    --size-field: calc(48px * var(--ui-scale));
     --background: #FFFFFF;
     --foreground: #1F1F1F;
     --card: #FFFFFF;
@@ -34,10 +35,10 @@
     --border: #DDDDDD;
     --input: #A3A3A3;
     --ring: #007200;
-    --radius-xs: 4px;
-    --radius: 8px;
-    --radius-md: 12px;
-    --radius-pill: 100px;
+    --radius-xs: calc(4px * var(--ui-scale));
+    --radius: calc(8px * var(--ui-scale));
+    --radius-md: calc(12px * var(--ui-scale));
+    --radius-pill: calc(100px * var(--ui-scale));
     --brand: #007200;
     --brand-secondary: #E5BE02;
     --header: #007200;
@@ -66,8 +67,8 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    min-height: 48px;
-    padding: 0 16px;
+    min-height: calc(48px * var(--ui-scale));
+    padding: 0 calc(16px * var(--ui-scale));
     background: var(--card);
     color: var(--foreground);
     border-bottom: 1px solid var(--border);
@@ -75,8 +76,8 @@
     font-weight: 700;
   }
   .native-bridge .plugin-logo {
-    width: 24px;
-    height: 24px;
+    width: calc(24px * var(--ui-scale));
+    height: calc(24px * var(--ui-scale));
     border-radius: var(--radius-pill);
     object-fit: contain;
     flex-shrink: 0;
@@ -512,10 +513,15 @@
         <div class="filters" id="filterBar" style="display:none;margin-top:10px">
           <select id="fCat" aria-label="Kategori">
             <option value="">Semua jenis masalah</option>
-            <option>AUTO_LAYOUT</option><option>TYPOGRAPHY</option><option>COLOR</option>
-            <option>SPACING</option><option>COMPONENT</option><option>NAMING</option><option>VARIABLE</option>
+            <option value="AUTO_LAYOUT">Auto Layout</option>
+            <option value="TYPOGRAPHY">Tipografi</option>
+            <option value="COLOR">Warna</option>
+            <option value="SPACING">Spacing & radius</option>
+            <option value="COMPONENT">Komponen</option>
+            <option value="NAMING">Penamaan</option>
+            <option value="VARIABLE">Variabel</option>
           </select>
-          <select id="fSev" aria-label="Severity">
+          <select id="fSev" aria-label="Tingkat">
             <option value="">Semua tingkat</option>
             <option value="HIGH">Penting</option><option value="MEDIUM">Sedang</option><option value="LOW">Ringan</option>
           </select>
@@ -596,11 +602,79 @@
   let detachScope = 'selection';
   let variableCatalog = [];
 
+  const UI_REF_W = 420;
+  const UI_REF_H = 760;
+  const STATUS_LABEL = {
+    EXCELLENT: 'Sangat baik',
+    PASS_WITH_WARNING: 'Perlu perhatian',
+    REJECTED: 'Perlu perbaikan',
+    FAIL: 'Perlu perbaikan'
+  };
+  const CATEGORY_LABEL = {
+    AUTO_LAYOUT: 'Auto Layout',
+    TYPOGRAPHY: 'Tipografi',
+    COLOR: 'Warna',
+    SPACING: 'Spacing & radius',
+    COMPONENT: 'Komponen',
+    NAMING: 'Penamaan',
+    VARIABLE: 'Variabel'
+  };
+  const FIELD_LABEL = {
+    itemSpacing: 'jarak antar item',
+    paddingLeft: 'padding kiri',
+    paddingRight: 'padding kanan',
+    paddingTop: 'padding atas',
+    paddingBottom: 'padding bawah',
+    width: 'lebar',
+    height: 'tinggi',
+    fontSize: 'ukuran font',
+    topLeftRadius: 'radius sudut',
+    fills: 'isi warna',
+    strokes: 'garis tepi',
+    textStyleId: 'gaya teks'
+  };
+
+  function syncUiScale() {
+    const w = window.innerWidth || UI_REF_W;
+    const h = window.innerHeight || UI_REF_H;
+    const s = Math.min(1.35, Math.max(0.78, Math.min(w / UI_REF_W, h / UI_REF_H)));
+    document.documentElement.style.setProperty('--ui-scale', String(Math.round(s * 1000) / 1000));
+  }
+
+  function kategoriLabel(cat) { return CATEGORY_LABEL[cat] || cat; }
+  function fieldLabel(field) { return FIELD_LABEL[field] || field; }
+
+  function humanizeCopy(text) {
+    if (text == null || text === '') return '';
+    let t = String(text);
+    t = t.replace(/PASS_WITH_WARNING/g, 'Perlu perhatian');
+    t = t.replace(/semantic-layer/gi, 'konvensi penamaan');
+    t = t.replace(/Bind variabel orphan/gi, 'Variabel terikat tidak ditemukan');
+    t = t.replace(/Font size belum terikat variabel typography/gi, 'Ukuran font belum pakai variabel tipografi');
+    t = t.replace(/Teks tidak menggunakan Text Style/gi, 'Teks belum memakai gaya teks');
+    t = t.replace(/ΔE\s*([\d.]+)/g, 'selisih warna $1');
+    t = t.replace(/\bwidth\b raw/gi, 'Lebar tanpa token');
+    t = t.replace(/\bheight\b raw/gi, 'Tinggi tanpa token');
+    t = t.replace(/\btypography\b/gi, 'tipografi');
+    return t;
+  }
+
+  function humanizeNotice(text) {
+    if (!text) return text;
+    return humanizeCopy(text)
+      .replace(/^Detach selesai:/, 'Lepas variabel selesai:')
+      .replace(/\bbind\b/gi, 'kaitan')
+      .replace(/^Remap /, 'Ganti variabel: ')
+      .replace(/ bind diperbarui/, ' kaitan diperbarui')
+      .replace(/Pilih layer untuk remap/i, 'Pilih layer untuk ganti variabel');
+  }
+
+
   function post(msg) { parent.postMessage({ pluginMessage: msg }, '*'); }
   function notice(text) {
     const el = $('notice');
     if (!text) { el.classList.remove('show'); el.textContent = ''; return; }
-    el.textContent = text;
+    el.textContent = humanizeNotice(text);
     el.classList.add('show');
   }
   function esc(s) {
@@ -719,7 +793,7 @@
   const SCAN_LABELS = {
     COLOR: 'Warna',
     SPACING: 'Spacing, padding & radius',
-    TYPOGRAPHY: 'Font & typography',
+    TYPOGRAPHY: 'Font & tipografi',
     VARIABLE: 'Variabel terikat'
   };
   const fmt = (n) => Number(n || 0).toLocaleString('id-ID');
@@ -738,7 +812,8 @@
       let text = 'menunggu';
       if (st.state === 'loading') text = st.total ? `sedang memuat ${fmt(st.done)}/${fmt(st.total)}` : 'sedang memuat';
       else if (st.state === 'done') text = st.total ? `selesai · ${fmt(st.total)}` : 'tidak ada';
-      return `<div class="live-row ${esc(st.state)}"><span class="name">${esc(st.label)}</span><span class="state">${esc(text)}</span></div>`;
+      const liveCls = st.state === 'loading' ? 'loading' : (st.state === 'done' ? 'done' : '');
+      return `<div class="live-row ${liveCls}"><span class="name">${esc(st.label)}</span><span class="state">${esc(text)}</span></div>`;
     }).join('');
   }
 
@@ -760,7 +835,7 @@
       renderLiveTokens(steps);
       const cur = steps && m.registryCurrent ? steps[m.registryCurrent] : null;
       if (m.registryCurrent === 'cache') {
-        $('progress').textContent = 'Sedang memuat token dari cache…';
+        $('progress').textContent = 'Sedang memuat token tersimpan…';
       } else if (m.registryCurrent === 'done') {
         $('progress').textContent = 'Token siap. Sedang memeriksa layer…';
       } else if (cur && cur.state === 'loading') {
@@ -782,9 +857,9 @@
   }
 
   function statusBadge(status) {
-    if (status === 'EXCELLENT') return ['badge-excellent', status];
-    if (status === 'PASS_WITH_WARNING') return ['badge-warn', status];
-    return ['badge-fail', status];
+    if (status === 'EXCELLENT') return ['badge-excellent', STATUS_LABEL.EXCELLENT];
+    if (status === 'PASS_WITH_WARNING') return ['badge-warn', STATUS_LABEL.PASS_WITH_WARNING];
+    return ['badge-fail', STATUS_LABEL[status] || STATUS_LABEL.REJECTED];
   }
 
   function groupViolations(list) {
@@ -823,7 +898,7 @@
     const vu = audit.variableUsage || {};
     const [badgeCls, badgeLabel] = statusBadge(audit.status);
     const rs = audit.registrySummary || {};
-    const tokenLine = `Token diaudit: ${fmt(rs.colorVariables)} warna · ${fmt(rs.spacingVariables)} spacing/padding · ${fmt(rs.radiusVariables)} radius · ${fmt(rs.typographyVariables)} font · ${fmt(rs.textStyles)} text style`;
+    const tokenLine = `Token diaudit: ${fmt(rs.colorVariables)} warna · ${fmt(rs.spacingVariables)} spacing/padding · ${fmt(rs.radiusVariables)} radius · ${fmt(rs.typographyVariables)} font · ${fmt(rs.textStyles)} gaya teks`;
 
     $('summary').innerHTML = `
       <div class="summary-block">
@@ -877,7 +952,7 @@
         return `Plugin pasang ${part === 'stroke' ? 'garis' : 'isi warna'}: ${name}`;
       }
       if (v.category === 'SPACING' && v.field) {
-        return `Plugin pasang jarak (${v.field}): ${name}`;
+        return `Plugin pasang ${fieldLabel(v.field)}: ${name}`;
       }
       if (v.category === 'TYPOGRAPHY' && v.field === 'fontSize') {
         return `Plugin ikat ukuran font: ${name}`;
@@ -898,8 +973,8 @@
     if (v.category === 'AUTO_LAYOUT') return 'Anda: nyalakan Auto Layout (panel kanan).';
     if (v.category === 'NAMING') return 'Anda: ubah nama layer.';
     if (v.category === 'COMPONENT') return 'Anda: ganti ke komponen SawitPRO.';
-    if (v.suggestion) return `Anda: ${v.suggestion}`;
-    return `Anda: ${v.issue}`;
+    if (v.suggestion) return `Anda: ${humanizeCopy(v.suggestion)}`;
+    return `Anda: ${humanizeCopy(v.issue)}`;
   }
 
   function appendFindingRow(container, v, opts) {
@@ -920,9 +995,9 @@
       <div class="body" data-ids="${esc((v.ids || [v.id]).join(','))}" data-idx="${idx}">
         ${countBadge}
         <div><b>${esc(v.layerName)}</b> <span class="subtle">${esc(v.topLevelScreen || '')}</span></div>
-        <div class="muted">${esc(v.category)} · ${esc(tingkatLabel(v.severity))} · ${esc(jenisPerbaikan(v))}</div>
+        <div class="muted">${esc(kategoriLabel(v.category))} · ${esc(tingkatLabel(v.severity))} · ${esc(jenisPerbaikan(v))}</div>
         <div class="subtle">${esc(v.issue)}${v.currentValue ? ` · ${esc(v.currentValue)}` : ''}</div>
-        ${action ? `<div class="action-line">${esc(action)}</div>` : ''}
+        ${action ? `<div class="action-line">${esc(humanizeCopy(action))}</div>` : ''}
         ${manual ? `<div class="action-line manual">${esc(manual)}</div>` : ''}
         ${copyBtn}
       </div>
@@ -986,7 +1061,7 @@
     emptyEl.style.display = 'none';
     const exact = audit.violations.filter((v) => v.matchType === 'EXACT');
     const manual = audit.violations.filter((v) => v.matchType !== 'EXACT');
-    statsEl.textContent = `${exact.length} plugin perbaiki · ${manual.length} Anda perbaiki sendiri`;
+    statsEl.textContent = `${exact.length} otomatis plugin · ${manual.length} manual di Figma`;
 
     const appendSection = (title, pred) => {
       const slice = audit.violations.map((v, i) => ({ v, i })).filter(({ v }) => pred(v));
@@ -1092,6 +1167,14 @@
       notice('UI: ' + (err && err.message ? err.message : String(err)));
     }
   };
+
+  syncUiScale();
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(syncUiScale).observe(document.documentElement);
+  } else {
+    window.addEventListener('resize', syncUiScale);
+  }
+  setTab('audit');
 </script>
 </body>
 </html>
