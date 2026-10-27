@@ -49,13 +49,13 @@ if grep -E 'import[[:space:]]*\(' "$ROOT/prompt/code.js" >/dev/null; then
   exit 1
 fi
 if ! grep -q "PLUGIN_VERSION = '1.0.6'" "$ROOT/prompt/code.js"; then
-  echo "ERROR: PLUGIN_VERSION 1.0.5 tidak ada di code.js"
+  echo "ERROR: PLUGIN_VERSION 1.0.6 tidak ada di code.js"
   exit 1
 fi
 for f in "$ROOT/icon.png" "$ROOT/prompt/icon.png" "$ROOT/prompt/brand-icon.png"; do
   if [[ ! -f "$f" ]]; then echo "ERROR: missing $f — npm run figma:bundle"; exit 1; fi
 done
-echo "  OK  icons + no SES trap + version 1.0.5"
+echo "  OK  icons + no SES trap + version 1.0.6"
 echo ""
 
 if [[ -f "$ROOT/code.js" ]]; then
