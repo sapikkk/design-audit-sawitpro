@@ -2,6 +2,12 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## 1.2.9
+
+- Spacing, radius, lebar/tinggi, dan ukuran font: otomatis jika variabel FLOAT terdekat dalam ±8 px (NEAR).
+- Kartu menampilkan nilai layer → nama variabel + selisih px (semua tipe variabel, bukan hanya warna).
+- Aturan: `nearMatchSpacingApplyPx` di `rules.json`.
+
 ## 1.2.8
 
 - Warna: otomatis jika variabel terdekat dalam ΔE 12 (NEAR); apply ikut NEAR warna.

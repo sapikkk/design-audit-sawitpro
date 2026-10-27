@@ -1205,16 +1205,33 @@
   }
   function canAutoApply(v) {
     if (!v) return false;
-    if (v.matchType === 'EXACT') return true;
-    if (v.category === 'COLOR' && v.matchType === 'NEAR' && (v.targetVariableKey || v.targetVariableId)) return true;
+    if (v.matchType === 'EXACT') {
+      return !!(v.targetVariableKey || v.targetVariableId || v.targetStyleKey || v.targetStyleId);
+    }
+    if (v.matchType !== 'NEAR') return false;
+    if (!(v.targetVariableKey || v.targetVariableId)) return false;
+    if (v.category === 'COLOR' || v.category === 'SPACING') return true;
+    if (v.category === 'TYPOGRAPHY' && v.field === 'fontSize') return true;
     return false;
   }
-  function colorVariableLine(v) {
-    if (v.category !== 'COLOR') return '';
-    const d = v.colorDeltaE != null ? ` · ΔE ${Number(v.colorDeltaE).toFixed(1)}` : '';
-    if (v.targetVariableName && v.currentValue) return `${v.currentValue} → ${v.targetVariableName}${d}`;
-    if (v.targetVariableName) return `${v.targetVariableName}${d}`;
-    return v.currentValue || '';
+  function variableBindingLine(v) {
+    if (v.category === 'COLOR') {
+      const d = v.colorDeltaE != null ? ` · ΔE ${Number(v.colorDeltaE).toFixed(1)}` : '';
+      if (v.targetVariableName && v.currentValue) return `${v.currentValue} → ${v.targetVariableName}${d}`;
+      if (v.targetVariableName) return `${v.targetVariableName}${d}`;
+      return v.currentValue || '';
+    }
+    if (v.category === 'SPACING' || (v.category === 'TYPOGRAPHY' && v.field === 'fontSize')) {
+      const d = v.pxDelta != null ? ` · Δ ${Number(v.pxDelta).toFixed(v.pxDelta % 1 ? 1 : 0)} px` : '';
+      if (v.targetVariableName && v.currentValue != null && v.currentValue !== '') {
+        return `${v.currentValue}px → ${v.targetVariableName}${d}`;
+      }
+      if (v.targetVariableName) return `${v.targetVariableName}${d}`;
+    }
+    if (v.category === 'TYPOGRAPHY' && v.targetVariableName && v.field === 'textStyleId') {
+      return v.currentValue ? `${v.currentValue} → ${v.targetVariableName}` : v.targetVariableName;
+    }
+    return '';
   }
   function setOptsCollapsed(on) {
     $('optsWrap').classList.toggle('collapsed', on);
@@ -1281,7 +1298,11 @@
 
   function applyActionLine(v) {
     const name = v.targetVariableName || nearestTokenFromSuggestion(v) || tokenNameFrom(v);
-    if (v.matchType === 'EXACT' || (v.category === 'COLOR' && v.matchType === 'NEAR')) {
+    const autoNear = v.matchType === 'NEAR' && (
+      v.category === 'COLOR' || v.category === 'SPACING'
+      || (v.category === 'TYPOGRAPHY' && v.field === 'fontSize')
+    );
+    if (v.matchType === 'EXACT' || autoNear) {
       if (v.category === 'COLOR') {
         const part = v.field === 'strokes' ? 'stroke' : 'fill';
         return `Akan dipasang (${part === 'stroke' ? 'garis' : 'isi warna'}): ${name}`;
@@ -1331,11 +1352,11 @@
     const onApplyPage = opts && opts.page === 'apply';
     const action = applyActionLine(v);
     const manual = (!onApplyPage && !auto) ? manualGuideLine(v) : '';
-    const cVar = colorVariableLine(v);
+    const bindLine = variableBindingLine(v);
     const statusLine = onApplyPage
       ? (auto ? 'Ketuk ikon → pasang variabel' : 'Ketuk ikon → tunjuk layer')
       : `${kategoriLabel(v.category)} · ${auto ? 'bisa otomatis' : 'tunjuk layer'}`;
-    const actionShown = onApplyPage && auto ? (cVar || '') : (cVar || action);
+    const actionShown = bindLine || (onApplyPage && auto ? '' : action);
     row.innerHTML = `
       <div class="body" data-ids="${esc((v.ids || [v.id]).join(','))}" data-idx="${idx}">
         ${countBadge}
