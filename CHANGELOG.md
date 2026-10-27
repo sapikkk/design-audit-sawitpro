@@ -2,6 +2,14 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## 1.2.0
+
+- Splash screen saat plugin dibuka, lalu halaman beranda dengan pilihan Periksa, Perbaiki, Alat.
+- Tiap pilihan membuka halamannya sendiri dengan tombol Kembali; tab atas dihapus.
+- Tombol utama (Mulai periksa, Perbaiki semua otomatis) dipasang di bar bawah.
+- Batalkan perubahan, Tandai di halaman, Hapus tanda dipindah ke menu titik tiga di halaman Perbaiki.
+- Kolom nama desainer dihapus.
+
 ## [1.1.5] — 2026-10-27
 
 ### Changed
