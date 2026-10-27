@@ -498,12 +498,12 @@
   <div class="panel on" id="p-audit">
     <div class="panel-body">
       <div class="field">
-        <span class="field-label">Periksa bagian</span>
-        <div class="segmented" id="scopeGroup">
-          <button type="button" data-scope="selection" data-active="false">Seleksi</button>
-          <button type="button" data-scope="page" data-active="true">Halaman</button>
-          <button type="button" data-scope="all" data-active="false">Semua</button>
-        </div>
+        <label class="field-label" for="auditScope">Periksa bagian</label>
+        <select id="auditScope" aria-label="Periksa bagian">
+          <option value="selection">Seleksi di kanvas</option>
+          <option value="page" selected>Halaman ini</option>
+          <option value="all">Semua halaman</option>
+        </select>
       </div>
 
       <div class="field">
@@ -627,7 +627,6 @@
   const $ = (id) => document.getElementById(id);
   let audit = null;
   let lastUndoLog = null;
-  let auditScope = 'page';
   let detachScope = 'selection';
   let variableCatalog = [];
 
@@ -802,13 +801,6 @@
     };
   });
 
-  $('scopeGroup').querySelectorAll('button').forEach((btn) => {
-    btn.onclick = () => {
-      auditScope = btn.dataset.scope;
-      $('scopeGroup').querySelectorAll('button').forEach((b) => { b.dataset.active = b === btn ? 'true' : 'false'; });
-    };
-  });
-
   $('runBtn').onclick = () => {
     notice('');
     $('progress').textContent = 'Sedang menyiapkan token…';
@@ -816,7 +808,7 @@
     $('runBtn').disabled = true;
     post({
       type: 'audit',
-      scope: auditScope,
+      scope: $('auditScope').value,
       owner: $('owner').value.trim(),
       refreshRegistry: $('refreshRegistry').checked
     });

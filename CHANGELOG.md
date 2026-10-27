@@ -2,6 +2,12 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## [1.1.4] — 2026-10-27
+
+### Changed
+
+- Tab **Periksa**: cakupan audit (Seleksi / Halaman / Semua) diganti dropdown, selaras field DS.
+
 ## [1.1.3] — 2026-10-27
 
 ### Fixed

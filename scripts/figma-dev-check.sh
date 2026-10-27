@@ -48,8 +48,8 @@ if grep -E 'import[[:space:]]*\(' "$ROOT/prompt/code.js" >/dev/null; then
   grep -n -E 'import[[:space:]]*\(' "$ROOT/prompt/code.js" || true
   exit 1
 fi
-if ! grep -q "PLUGIN_VERSION = '1.1.3'" "$ROOT/prompt/code.js"; then
-  echo "ERROR: PLUGIN_VERSION 1.1.3 tidak ada di code.js"
+if ! grep -q "PLUGIN_VERSION = '1.1.4'" "$ROOT/prompt/code.js"; then
+  echo "ERROR: PLUGIN_VERSION 1.1.4 tidak ada di code.js"
   exit 1
 fi
 for f in "$ROOT/icon.png" "$ROOT/prompt/icon.png" "$ROOT/prompt/brand-icon.png"; do
@@ -63,7 +63,7 @@ if ! grep -q 'data:image/png;base64,' "$ROOT/prompt/ui.html" 2>/dev/null; then
   echo "ERROR: logo belum di-embed di prompt/ui.html — npm run figma:bundle"
   exit 1
 fi
-echo "  OK  icons + logo embed + no SES trap + version 1.1.3"
+echo "  OK  icons + logo embed + no SES trap + version 1.1.4"
 echo ""
 
 if [[ -f "$ROOT/code.js" ]]; then
