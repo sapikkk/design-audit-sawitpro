@@ -2,6 +2,13 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## [1.1.5] — 2026-10-27
+
+### Changed
+
+- Pencocokan spacing/radius/font: bulatkan px + toleransi ±1 px (`nearMatchSpacingPx`) agar lebih banyak temuan **EXACT** yang aman di-apply.
+- Saran token menampilkan selisih px bila tidak otomatis; tab **Perbaiki** menjelaskan mengapa 0 otomatis.
+
 ## [1.1.4] — 2026-10-27
 
 ### Changed

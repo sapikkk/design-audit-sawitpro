@@ -1,6 +1,6 @@
-// DS Audit Pro — code.js (v1.1.4)
+// DS Audit Pro — code.js (v1.1.5)
 // Berjalan di sandbox Figma. Tidak ada LLM, tidak ada network, tidak ada token di config.
-console.log('[DESIGN AUDIT SAWITPRO] plugin v1.1.4 loaded');
+console.log('[DESIGN AUDIT SAWITPRO] plugin v1.1.5 loaded');
 // Semua token dan komponen ditemukan dari file aktif dan library yang di-enable.
 // Mode: audit, apply, undo (in-memory), annotate, clear-annotations, select.
 
@@ -88,7 +88,7 @@ const FILE_CATEGORY_LABEL = {
   OTHER: 'Lainnya'
 };
 
-const PLUGIN_VERSION = '1.1.4';
+const PLUGIN_VERSION = '1.1.5';
 const PLUGIN_VERSION_LABEL = '1.1';
 
 const UI_DEFAULT_W = 420;
@@ -148,6 +148,7 @@ const AUDIT_RULES = {
   },
   thresholds: { excellent: 90, warning: 75 },
   nearMatchDeltaE: 2.0,
+  nearMatchSpacingPx: 1,
   namingPatterns: {
     screen: '^Screen\\/[A-Za-z0-9-]+$',
     component: '^(Card|Button|Navbar|Input|Modal)\\/[A-Za-z0-9-]+$',
@@ -792,13 +793,24 @@ function nearest(list, value) {
   return best;
 }
 
-function matchPx(value, list) {
-  const exact = list.find((v) => v.px === value);
+function matchPx(value, list, tolerancePx) {
+  if (typeof value !== 'number' || !list || !list.length) {
+    return { matchType: 'NONE', suggestion: 'Tidak ada token di file' };
+  }
+  const tol = typeof tolerancePx === 'number' ? tolerancePx : 0;
+  const rv = Math.round(value);
+  const exact = list.find((v) => Math.round(v.px) === rv);
   if (exact) return toMatch('EXACT', exact, `Ikat ke ${exact.name}`);
   const near = nearest(list, value);
+  if (near && Math.abs(near.px - value) <= tol) {
+    return toMatch('EXACT', near, `Ikat ke ${near.name}`);
+  }
+  const delta = near ? Math.round(Math.abs(near.px - value)) : null;
   return {
     matchType: 'NONE',
-    suggestion: near ? `Token terdekat ${near.name} (${near.px}px)` : 'Tidak ada token di file'
+    suggestion: near
+      ? `Token terdekat «${near.name}» (${near.px} px${delta != null ? `, selisih ${delta} px` : ''}) — tidak otomatis`
+      : 'Tidak ada token spacing/radius di file'
   };
 }
 
@@ -895,7 +907,7 @@ function checkTypography(node, ctx, base) {
   if (ok) return;
   if (node.fontSize !== figma.mixed && typeof node.fontSize === 'number') {
     const fontTokens = (ctx.reg.typographyVariables || []).filter((v) => v.role === 'fontSize');
-    const fontMatch = matchPx(node.fontSize, fontTokens);
+    const fontMatch = matchPx(node.fontSize, fontTokens, ctx.rules.nearMatchSpacingPx);
     if (fontMatch.matchType === 'EXACT') {
       addViolation(ctx, base, 'TYPOGRAPHY', 'MEDIUM', 'Ukuran font belum pakai variabel tipografi', {
         field: 'fontSize',
@@ -1066,7 +1078,7 @@ function checkSize(node, ctx, base) {
       continue;
     }
     count(ctx, 'SPACING', false);
-    const m = matchPx(val, ctx.reg.spacingVariables);
+    const m = matchPx(val, ctx.reg.spacingVariables, ctx.rules.nearMatchSpacingPx);
     addViolation(ctx, base, 'SPACING', 'LOW', `${auditFieldLabel(key)} tanpa token (${Math.round(val)} px)`, {
       field: key,
       currentValue: String(Math.round(val)),
@@ -1114,7 +1126,7 @@ function checkSpacing(node, ctx, base) {
 
   const first = bad[0];
   const list = first.radius ? ctx.reg.radiusVariables : ctx.reg.spacingVariables;
-  const m = matchPx(first.value, list);
+  const m = matchPx(first.value, list, ctx.rules.nearMatchSpacingPx);
   addViolation(ctx, base, 'SPACING', 'MEDIUM',
     `Nilai tidak standar: ${bad.map((b) => `${auditFieldLabel(b.field)} ${b.value} px`).join(', ')}`, {
       field: first.field,

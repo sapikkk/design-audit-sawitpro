@@ -1086,7 +1086,11 @@
     emptyEl.style.display = 'none';
     const exact = audit.violations.filter((v) => v.matchType === 'EXACT');
     const manual = audit.violations.filter((v) => v.matchType !== 'EXACT');
-    statsEl.textContent = `${exact.length} otomatis plugin · ${manual.length} manual di Figma`;
+    let statsHtml = `${exact.length} otomatis plugin · ${manual.length} manual di Figma`;
+    if (exact.length === 0 && manual.length > 0) {
+      statsHtml += `<div class="subtle" style="margin-top:6px">Plugin hanya otomatis jika nilai layer sudah sama dengan token (±1 px), warna persis, atau gaya teks cocok. Penamaan, komponen, dan Auto Layout selalu manual.</div>`;
+    }
+    statsEl.innerHTML = statsHtml;
 
     const appendSection = (title, pred) => {
       const slice = audit.violations.map((v, i) => ({ v, i })).filter(({ v }) => pred(v));
@@ -1119,7 +1123,10 @@
   $('applyAll').onclick = () => {
     if (!audit) { notice('Dulu: tab Periksa → Mulai periksa.'); return; }
     const items = audit.violations.filter((v) => v.matchType === 'EXACT');
-    if (items.length === 0) { notice('Tidak ada yang bisa otomatis.'); return; }
+    if (items.length === 0) {
+      notice('Tidak ada yang bisa otomatis. Semua temuan perlu dicek di Figma: nilai layer tidak cocok persis dengan token, atau jenis temuan (penamaan, komponen, Auto Layout) tidak didukung plugin.');
+      return;
+    }
     if (!confirm(`Perbaiki otomatis ${items.length} item?`)) return;
     post({ type: 'apply', items });
   };

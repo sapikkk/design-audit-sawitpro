@@ -12,6 +12,7 @@
   },
   "thresholds": { "excellent": 90, "warning": 75 },
   "nearMatchDeltaE": 2.0,
+  "nearMatchSpacingPx": 1,
   "namingPatterns": {
     "screen": "^Screen\\/[A-Za-z0-9-]+$",
     "component": "^(Card|Button|Navbar|Input|Modal)\\/[A-Za-z0-9-]+$",
