@@ -2,6 +2,13 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## 1.2.1
+
+- Hasil periksa dikelompokkan dengan tab kategori (Semua, Spacing & radius, Warna, dst.) lengkap dengan jumlah.
+- Tombol Kembali jadi ikon chevron bawah.
+- Opsi periksa jadi satu baris (label kiri, dropdown kanan) dan otomatis menciut setelah periksa; ketuk untuk membuka.
+- Kartu temuan memakai border penuh; tombol aksi jadi ikon di kanan: putar-ulang untuk perbaiki otomatis, kaca pembesar untuk tunjuk layer.
+
 ## 1.2.0
 
 - Splash screen saat plugin dibuka, lalu halaman beranda dengan pilihan Periksa, Perbaiki, Alat.
