@@ -2,6 +2,11 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## 1.2.6
+
+- Ringkasan skor dan Opsi periksa sejajar di baris atas; daftar temuan naik ke atas.
+- Opsi periksa default menciut setelah ada hasil; buka untuk ubah scope atau muat ulang token.
+
 ## 1.2.5
 
 - Resize hanya saat klik-tahan dan tarik pegangan; listener dipasang di document selama drag, bukan permanen di pegangan.

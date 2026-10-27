@@ -406,9 +406,29 @@
     margin-top: 4px;
   }
   .action-line.manual { color: var(--warning); font-weight: 500; }
-  .summary-block {
-    padding: 12px 0;
+  .audit-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px 12px;
+    flex-shrink: 0;
+  }
+  .audit-head #summary { flex: 1 1 160px; min-width: 0; }
+  .audit-head:not(.has-result) #summary:empty { display: none; }
+  .audit-head:not(.has-result) .opts { flex: 1 1 100%; }
+  .audit-head.has-result .opts {
+    flex: 0 1 calc(168px * var(--ui-scale));
+    min-width: calc(120px * var(--ui-scale));
+    align-self: center;
+  }
+  .audit-head.has-result .opts:not(.collapsed) { flex: 1 1 100%; align-self: stretch; }
+  .audit-head.has-result {
+    padding-bottom: calc(8px * var(--ui-scale));
     border-bottom: 1px solid var(--border);
+  }
+  .summary-block {
+    padding: 0;
+    border-bottom: none;
   }
   .apply-empty {
     padding: 16px 0;
@@ -626,6 +646,14 @@
 
   /* Opsi periksa (bisa disembunyikan) */
   .opts { border: 1px solid var(--border); border-radius: var(--radius-md); flex-shrink: 0; }
+  .audit-head.has-result .opts-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: calc(10px * var(--ui-scale)) calc(12px * var(--ui-scale));
+    font-size: var(--font-size-xsmall);
+  }
+  .audit-head.has-result .opts.collapsed .opts-sum { text-align: left; flex: none; width: 100%; }
   .opts-head {
     width: 100%; display: flex; align-items: center; gap: 8px; border: none; background: transparent;
     font: inherit; font-size: var(--font-size-small); font-weight: 700; color: var(--foreground);
@@ -705,25 +733,28 @@
   <div class="panel" id="p-audit">
     <div class="viewbar"><button type="button" class="back-btn" aria-label="Kembali ke beranda" title="Kembali"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button><span class="vtitle">Periksa</span></div>
     <div class="panel-body">
-      <div class="opts" id="optsWrap">
-        <button type="button" class="opts-head" id="optsToggle" aria-expanded="true">
-          <span>Opsi periksa</span><span class="opts-sum" id="optsSum"></span>
-          <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-        </button>
-        <div class="opts-body" id="optsBody">
-          <div class="field-row">
-            <label class="field-label" for="auditScope">Periksa bagian</label>
-            <select id="auditScope" aria-label="Periksa bagian">
-              <option value="selection">Seleksi di kanvas</option>
-              <option value="page" selected>Halaman ini</option>
-              <option value="all">Semua halaman</option>
-            </select>
-          </div>
-          <div class="check-block">
-            <label class="toggle-row">
-              <input type="checkbox" id="refreshRegistry"> Muat ulang token dari library
-            </label>
-            <p class="hint">Warna, spacing, radius, font, text style. Lebih lama.</p>
+      <div class="audit-head" id="auditHead">
+        <div id="summary"></div>
+        <div class="opts collapsed" id="optsWrap">
+          <button type="button" class="opts-head" id="optsToggle" aria-expanded="false">
+            <span>Opsi periksa</span><span class="opts-sum" id="optsSum"></span>
+            <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="opts-body" id="optsBody">
+            <div class="field-row">
+              <label class="field-label" for="auditScope">Periksa bagian</label>
+              <select id="auditScope" aria-label="Periksa bagian">
+                <option value="selection">Seleksi di kanvas</option>
+                <option value="page" selected>Halaman ini</option>
+                <option value="all">Semua halaman</option>
+              </select>
+            </div>
+            <div class="check-block">
+              <label class="toggle-row">
+                <input type="checkbox" id="refreshRegistry"> Muat ulang token dari library
+              </label>
+              <p class="hint">Warna, spacing, radius, font, text style. Lebih lama.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -739,8 +770,7 @@
         <div id="emptyHint" class="card empty-hint" style="display:none">
           <span id="libraryWarn" class="warn-chip" style="display:none"></span>
         </div>
-        <div id="summary"></div>
-        <div class="filters" id="filterBar" style="display:none;margin-top:10px">
+        <div class="filters" id="filterBar" style="display:none;margin-top:4px">
 <div class="cat-tabs" id="catTabs" role="tablist" aria-label="Kategori"></div>
         </div>
         <div class="toggle-row" id="listToggles" style="display:none;margin-top:8px">
@@ -1160,12 +1190,12 @@
 
   function renderAudit() {
     $('emptyHint').style.display = 'none';
-        const exact = audit.violations.filter((v) => v.matchType === 'EXACT').length;
-        const vu = audit.variableUsage || {};
+    const exact = audit.violations.filter((v) => v.matchType === 'EXACT').length;
     const [badgeCls, badgeLabel] = statusBadge(audit.status);
     const rs = audit.registrySummary || {};
     const tokenLine = `Acuan Design System SawitPRO: ${fmt(rs.colorVariables)} warna · ${fmt(rs.spacingVariables)} spacing · ${fmt(rs.radiusVariables)} radius · ${fmt(rs.typographyVariables)} font · ${fmt(rs.textStyles)} gaya teks`;
 
+    $('auditHead').classList.add('has-result');
     $('summary').innerHTML = `
       <div class="summary-block">
         <div class="score-row">
@@ -1505,6 +1535,7 @@
   window.addEventListener('resize', syncUiScale);
   initPanelResize();
   initSplash();
+  setOptsCollapsed(true);
   showView('home');
 </script>
 </body>
