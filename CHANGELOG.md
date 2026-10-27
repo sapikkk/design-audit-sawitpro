@@ -2,6 +2,16 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## [1.1.2] — 2026-10-27
+
+### Added
+
+- Pegangan **ubah ukuran panel** di sudut kanan bawah (Figma tidak mendukung drag tepi jendela plugin). Ukuran disimpan untuk sesi berikutnya.
+
+### Fixed
+
+- Pesan error seleksi lintas halaman ditampilkan dalam Bahasa Indonesia.
+
 ## [1.1.1] — 2026-10-27
 
 ### Changed

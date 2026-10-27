@@ -1,6 +1,6 @@
-// DS Audit Pro — code.js (v1.1.1)
+// DS Audit Pro — code.js (v1.1.2)
 // Berjalan di sandbox Figma. Tidak ada LLM, tidak ada network, tidak ada token di config.
-console.log('[DESIGN AUDIT SAWITPRO] plugin v1.1.1 loaded');
+console.log('[DESIGN AUDIT SAWITPRO] plugin v1.1.2 loaded');
 // Semua token dan komponen ditemukan dari file aktif dan library yang di-enable.
 // Mode: audit, apply, undo (in-memory), annotate, clear-annotations, select.
 
@@ -88,8 +88,31 @@ const FILE_CATEGORY_LABEL = {
   OTHER: 'Lainnya'
 };
 
-const PLUGIN_VERSION = '1.1.1';
+const PLUGIN_VERSION = '1.1.2';
 const PLUGIN_VERSION_LABEL = '1.1';
+
+const UI_DEFAULT_W = 420;
+const UI_DEFAULT_H = 760;
+const UI_MIN_W = 280;
+const UI_MIN_H = 400;
+const UI_MAX_W = 560;
+const UI_MAX_H = 1200;
+const UI_SIZE_STORAGE_KEY = 'auditPluginUiSize';
+
+function clampUiSize(w, h) {
+  return {
+    width: Math.min(UI_MAX_W, Math.max(UI_MIN_W, Math.round(w))),
+    height: Math.min(UI_MAX_H, Math.max(UI_MIN_H, Math.round(h)))
+  };
+}
+
+function humanizePluginError(err) {
+  const msg = err && err.message ? err.message : String(err || '');
+  if (/set_selection/i.test(msg) && /only include nodes in that page/i.test(msg)) {
+    return 'Tidak bisa menandai layer: buka halaman layer tersebut dulu, lalu klik temuan lagi.';
+  }
+  return msg;
+}
 
 /** Label properti Figma untuk teks temuan (bukan identifier API). */
 function auditFieldLabel(field) {
@@ -709,7 +732,13 @@ async function bootUi() {
   }
 }
 
-figma.showUI(__html__, { width: 420, height: 760, themeColors: true });
+figma.showUI(__html__, { width: UI_DEFAULT_W, height: UI_DEFAULT_H, themeColors: true });
+figma.clientStorage.getAsync(UI_SIZE_STORAGE_KEY).then((size) => {
+  if (size && size.width && size.height) {
+    const c = clampUiSize(size.width, size.height);
+    figma.ui.resize(c.width, c.height);
+  }
+}).catch(() => {});
 figma.notify('Audit SawitPRO v' + PLUGIN_VERSION_LABEL + ' siap dipakai', { timeout: 2800 });
 bootUi();
 
@@ -1704,8 +1733,13 @@ async function selectNodes(ids) {
     return;
   }
 
-  figma.currentPage.selection = onPage;
-  figma.viewport.scrollAndZoomIntoView(onPage);
+  try {
+    figma.currentPage.selection = onPage;
+    figma.viewport.scrollAndZoomIntoView(onPage);
+  } catch (e) {
+    figma.ui.postMessage({ type: 'notice', text: humanizePluginError(e) });
+    return;
+  }
 
   const skipped = entries.length - onPage.length;
   if (skipped > 0) {
@@ -1727,13 +1761,17 @@ figma.ui.onmessage = async (msg) => {
     else if (msg.type === 'clear-annotations') await clearAnnotations();
     else if (msg.type === 'select') await selectNode(msg.nodeId);
     else if (msg.type === 'select-many') await selectNodes(msg.nodeIds || []);
-    else if (msg.type === 'resize-ui') figma.ui.resize(msg.width || 420, msg.height || 760);
+    else if (msg.type === 'resize-ui') {
+      const c = clampUiSize(msg.width || UI_DEFAULT_W, msg.height || UI_DEFAULT_H);
+      figma.ui.resize(c.width, c.height);
+      figma.clientStorage.setAsync(UI_SIZE_STORAGE_KEY, c).catch(() => {});
+    }
     else if (msg.type === 'detach-variables') await detachVariables(msg.scope || 'selection');
     else if (msg.type === 'remap-variable') await remapVariable(msg.scope || 'selection', msg.fromKey, msg.toKey);
     else if (msg.type === 'load-variable-catalog') await loadVariableCatalog();
     else if (msg.type === 'close') figma.closePlugin();
   } catch (e) {
-    figma.ui.postMessage({ type: 'notice', text: 'Gagal: ' + (e && e.message ? e.message : String(e)) });
+    figma.ui.postMessage({ type: 'notice', text: 'Gagal: ' + humanizePluginError(e) });
     figma.ui.postMessage({ type: 'audit-abort' });
   }
 };

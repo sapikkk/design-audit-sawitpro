@@ -457,6 +457,27 @@
   .tool-head .field-label { font-size: var(--font-size-small); }
   .tool-body { margin-top: 12px; display: flex; flex-direction: column; gap: 12px; }
   .tool-body[hidden] { display: none; }
+
+  /* Pegangan ubah ukuran jendela plugin (Figma tidak punya resize native) */
+  .ui-resize {
+    position: fixed;
+    right: 2px;
+    bottom: 2px;
+    z-index: 100;
+    width: calc(16px * var(--ui-scale, 1));
+    height: calc(16px * var(--ui-scale, 1));
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: nwse-resize;
+    touch-action: none;
+    opacity: 0.65;
+  }
+  .ui-resize:hover { opacity: 1; }
+  .ui-resize:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--ring) 45%, transparent);
+    outline-offset: 1px;
+  }
 </style>
 </head>
 <body>
@@ -594,6 +615,14 @@
   <div id="notice"></div>
 </div>
 
+<button type="button" class="ui-resize" id="uiResize" aria-label="Ubah ukuran panel" title="Tarik untuk ubah ukuran">
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M16 0V16H0L16 0Z" fill="var(--card)"/>
+    <path d="M6.22577 16H3L16 3V6.22576L6.22577 16Z" fill="var(--input)"/>
+    <path d="M11.8602 16H8.63441L16 8.63441V11.8602L11.8602 16Z" fill="var(--input)"/>
+  </svg>
+</button>
+
 <script>
   const $ = (id) => document.getElementById(id);
   let audit = null;
@@ -604,6 +633,10 @@
 
   const UI_REF_W = 420;
   const UI_REF_H = 760;
+  const UI_MIN_W = 280;
+  const UI_MIN_H = 400;
+  const UI_MAX_W = 560;
+  const UI_MAX_H = 1200;
   const STATUS_LABEL = {
     EXCELLENT: 'Sangat baik',
     PASS_WITH_WARNING: 'Perlu perhatian',
@@ -1168,12 +1201,40 @@
     }
   };
 
+  function clampPanelSize(w, h) {
+    return {
+      width: Math.min(UI_MAX_W, Math.max(UI_MIN_W, Math.round(w))),
+      height: Math.min(UI_MAX_H, Math.max(UI_MIN_H, Math.round(h)))
+    };
+  }
+
+  function initPanelResize() {
+    const grip = $('uiResize');
+    if (!grip) return;
+    const onMove = (e) => {
+      const size = clampPanelSize(e.clientX + 6, e.clientY + 6);
+      post({ type: 'resize-ui', width: size.width, height: size.height });
+    };
+    const end = (e) => {
+      grip.onpointermove = null;
+      try { grip.releasePointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    };
+    grip.onpointerdown = (e) => {
+      e.preventDefault();
+      grip.onpointermove = onMove;
+      grip.setPointerCapture(e.pointerId);
+    };
+    grip.onpointerup = end;
+    grip.onpointercancel = end;
+  }
+
   syncUiScale();
   if (typeof ResizeObserver !== 'undefined') {
     new ResizeObserver(syncUiScale).observe(document.documentElement);
   } else {
     window.addEventListener('resize', syncUiScale);
   }
+  initPanelResize();
   setTab('audit');
 </script>
 </body>
