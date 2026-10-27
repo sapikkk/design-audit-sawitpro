@@ -2,6 +2,13 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## [1.1.3] — 2026-10-27
+
+### Fixed
+
+- Panel tidak lagi melompat ke ukuran default setelah di-resize: skrip lama `syncUiSize` (debounce 120 ms, min 640 px tinggi) dihapus; hanya pegangan sudut yang mengubah ukuran.
+- Ukuran tersimpan dibuka langsung saat plugin start (tanpa flash 420×760).
+
 ## [1.1.2] — 2026-10-27
 
 ### Added

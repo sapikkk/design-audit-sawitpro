@@ -1,6 +1,6 @@
-// DS Audit Pro — code.js (v1.1.2)
+// DS Audit Pro — code.js (v1.1.3)
 // Berjalan di sandbox Figma. Tidak ada LLM, tidak ada network, tidak ada token di config.
-console.log('[DESIGN AUDIT SAWITPRO] plugin v1.1.2 loaded');
+console.log('[DESIGN AUDIT SAWITPRO] plugin v1.1.3 loaded');
 // Semua token dan komponen ditemukan dari file aktif dan library yang di-enable.
 // Mode: audit, apply, undo (in-memory), annotate, clear-annotations, select.
 
@@ -88,7 +88,7 @@ const FILE_CATEGORY_LABEL = {
   OTHER: 'Lainnya'
 };
 
-const PLUGIN_VERSION = '1.1.2';
+const PLUGIN_VERSION = '1.1.3';
 const PLUGIN_VERSION_LABEL = '1.1';
 
 const UI_DEFAULT_W = 420;
@@ -732,15 +732,25 @@ async function bootUi() {
   }
 }
 
-figma.showUI(__html__, { width: UI_DEFAULT_W, height: UI_DEFAULT_H, themeColors: true });
+let uiSizeRestoreDone = false;
+
+function openPluginUi(width, height) {
+  figma.showUI(__html__, { width, height, themeColors: true });
+  uiSizeRestoreDone = true;
+  figma.notify('Audit SawitPRO v' + PLUGIN_VERSION_LABEL + ' siap dipakai', { timeout: 2800 });
+  bootUi();
+}
+
 figma.clientStorage.getAsync(UI_SIZE_STORAGE_KEY).then((size) => {
   if (size && size.width && size.height) {
     const c = clampUiSize(size.width, size.height);
-    figma.ui.resize(c.width, c.height);
+    openPluginUi(c.width, c.height);
+  } else {
+    openPluginUi(UI_DEFAULT_W, UI_DEFAULT_H);
   }
-}).catch(() => {});
-figma.notify('Audit SawitPRO v' + PLUGIN_VERSION_LABEL + ' siap dipakai', { timeout: 2800 });
-bootUi();
+}).catch(() => {
+  openPluginUi(UI_DEFAULT_W, UI_DEFAULT_H);
+});
 
 // ---------- Pencocokan nilai ----------
 
@@ -1764,7 +1774,9 @@ figma.ui.onmessage = async (msg) => {
     else if (msg.type === 'resize-ui') {
       const c = clampUiSize(msg.width || UI_DEFAULT_W, msg.height || UI_DEFAULT_H);
       figma.ui.resize(c.width, c.height);
-      figma.clientStorage.setAsync(UI_SIZE_STORAGE_KEY, c).catch(() => {});
+      if (uiSizeRestoreDone) {
+        figma.clientStorage.setAsync(UI_SIZE_STORAGE_KEY, c).catch(() => {});
+      }
     }
     else if (msg.type === 'detach-variables') await detachVariables(msg.scope || 'selection');
     else if (msg.type === 'remap-variable') await remapVariable(msg.scope || 'selection', msg.fromKey, msg.toKey);

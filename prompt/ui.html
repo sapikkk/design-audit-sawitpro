@@ -1145,14 +1145,6 @@
   };
   $('clearBtn').onclick = () => post({ type: 'clear-annotations' });
 
-  function syncUiSize() {
-    const w = Math.min(520, Math.max(360, window.innerWidth || 420));
-    const h = Math.min(900, Math.max(640, window.innerHeight || 760));
-    post({ type: 'resize-ui', width: w, height: h });
-  }
-  window.addEventListener('resize', () => { clearTimeout(window._rsz); window._rsz = setTimeout(syncUiSize, 120); });
-  syncUiSize();
-
   window.onmessage = (ev) => {
     try {
     const m = ev.data && ev.data.pluginMessage;
@@ -1211,13 +1203,29 @@
   function initPanelResize() {
     const grip = $('uiResize');
     if (!grip) return;
+    let resizeRaf = 0;
+    let pendingSize = null;
+    const flushResize = () => {
+      resizeRaf = 0;
+      if (!pendingSize) return;
+      post({ type: 'resize-ui', width: pendingSize.width, height: pendingSize.height });
+      pendingSize = null;
+    };
     const onMove = (e) => {
-      const size = clampPanelSize(e.clientX + 6, e.clientY + 6);
-      post({ type: 'resize-ui', width: size.width, height: size.height });
+      pendingSize = clampPanelSize(e.clientX + 6, e.clientY + 6);
+      if (!resizeRaf) resizeRaf = requestAnimationFrame(flushResize);
     };
     const end = (e) => {
       grip.onpointermove = null;
       try { grip.releasePointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+      if (pendingSize) {
+        post({ type: 'resize-ui', width: pendingSize.width, height: pendingSize.height });
+        pendingSize = null;
+      }
+      if (resizeRaf) {
+        cancelAnimationFrame(resizeRaf);
+        resizeRaf = 0;
+      }
     };
     grip.onpointerdown = (e) => {
       e.preventDefault();
