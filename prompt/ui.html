@@ -1195,12 +1195,12 @@
 
   function tokenNameFrom(v) {
     if (v.targetVariableName) return v.targetVariableName;
-    const m = (v.suggestion || '').match(/Ikat ke (.+)|Mirip (.+?) \(/);
+    const m = (v.suggestion || '').match(/Ikat ke (.+)|Mirip «?(.+?)»? \(/);
     return m ? (m[1] || m[2]) : '';
   }
 
   function nearestTokenFromSuggestion(v) {
-    const m = (v.suggestion || '').match(/(?:Token|Variabel) terdekat ([^(,]+)/);
+    const m = (v.suggestion || '').match(/(?:Token|Variabel) terdekat «([^»]+)»/);
     return m ? m[1].trim() : '';
   }
 
