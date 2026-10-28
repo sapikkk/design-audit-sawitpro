@@ -23,6 +23,7 @@ Read the full link list: [reference.md](./reference.md).
 | Design-to-code skills | [Properly-DEV/figma-to-code-skills](https://github.com/Properly-DEV/figma-to-code-skills), [jeltehomminga/figma-design-skills](https://github.com/jeltehomminga/figma-design-skills) |
 | MCP / Figma file tools | [planetabhi/figma-mcp-server](https://github.com/planetabhi/figma-mcp-server), [dannote/figma-use](https://github.com/dannote/figma-use) |
 | Awesome lists (discovery only) | [react-figma/awesome-figma](https://github.com/react-figma/awesome-figma), [awesomelistsio/awesome-figma](https://github.com/awesomelistsio/awesome-figma), [mrstev3n/figma-plugins-on-github](https://github.com/mrstev3n/figma-plugins-on-github) |
+| Semantic layer / component match | [docs/agent/figma-semantic-layer-references.md](../../../docs/agent/figma-semantic-layer-references.md) (Intent, Pattern Pal, FigmaLint naming, Code Connect, …) |
 | Agent harness (personal machine) | [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman), [barlevalon/skills](https://github.com/barlevalon/skills) (Superpowers), [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) |
 
 ## Install (curated)

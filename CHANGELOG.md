@@ -2,6 +2,12 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## Unreleased
+
+### Added
+
+- Dokumen referensi semantic layer & deteksi komponen Figma: `docs/agent/figma-semantic-layer-references.md`; tautan di README, `docs/`, `AGENTS.md`, skill figma-ecosystem-index.
+
 ## 1.2.9
 
 - Spacing, radius, lebar/tinggi, dan ukuran font: otomatis jika variabel FLOAT terdekat dalam ±8 px (NEAR).

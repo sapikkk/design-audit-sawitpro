@@ -42,6 +42,8 @@ Checklist lengkap: [`../docs/agent/team-rollout.md`](../docs/agent/team-rollout.
 
 Perbandingan Community: [`../docs/agent/community-linter-comparison.md`](../docs/agent/community-linter-comparison.md).
 
+Referensi GitHub untuk semantic layer dan deteksi komponen (level A/B/C, di luar scope audit token saat ini): [`../docs/agent/figma-semantic-layer-references.md`](../docs/agent/figma-semantic-layer-references.md).
+
 ## Skor
 
 - ≥ 90: EXCELLENT · 75–89: PASS_WITH_WARNING · &lt; 75: REJECTED

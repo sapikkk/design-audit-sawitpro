@@ -6,6 +6,7 @@
 |--------|---------|
 | Index agent + plugin | [`agent/README.md`](agent/README.md) |
 | vs Community linters | [`agent/community-linter-comparison.md`](agent/community-linter-comparison.md) |
+| Semantic layer / komponen (referensi GitHub) | [`agent/figma-semantic-layer-references.md`](agent/figma-semantic-layer-references.md) |
 | DS 3.0 + MCP | [`agent/figma-mcp-design-system-rules.md`](agent/figma-mcp-design-system-rules.md) |
 | Ikon publish | [`agent/figma-plugin-icon-publish.md`](agent/figma-plugin-icon-publish.md) |
 | Changelog | [`../CHANGELOG.md`](../CHANGELOG.md) |

@@ -15,7 +15,7 @@ Plugin Figma untuk **mengaudit kepatuhan Design System** di file desain SawitPRO
 | [`prompt/`](prompt/) | **Plugin siap pakai** — `code.js`, `ui.html`, `rules.json`, ikon |
 | [`manifest.json`](manifest.json) | Entry Figma → arahkan ke `prompt/` |
 | [`icon.png`](icon.png) | Ikon 128×128 untuk **Publish** plugin org |
-| [`docs/agent/`](docs/agent/) | Perbandingan Community, MCP DS, publish icon |
+| [`docs/agent/`](docs/agent/) | Perbandingan Community, MCP DS, publish icon, referensi semantic layer |
 | [`AGENTS.md`](AGENTS.md) | Aturan agent + **commit/push otomatis** |
 | Root `code.ts` | Template resmi Figma (stub); plugin lengkap di `prompt/` |
 
@@ -30,6 +30,8 @@ Plugin Figma untuk **mengaudit kepatuhan Design System** di file desain SawitPRO
 | **Tools** | Detach variabel · remap A→B pada seleksi · `[no-tokens]` di deskripsi komponen |
 
 Parity vs plugin Community: [`docs/agent/community-linter-comparison.md`](docs/agent/community-linter-comparison.md).
+
+Roadmap referensi (deteksi komponen, rename semantic): [`docs/agent/figma-semantic-layer-references.md`](docs/agent/figma-semantic-layer-references.md). Plugin saat ini fokus audit variabel/komponen library via INSTANCE + penamaan `rules.json`; fingerprint struktural belum ada.
 
 ---
 

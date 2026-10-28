@@ -21,6 +21,31 @@ Figma plugin & design
 - https://github.com/youware-labs/figma-pilot
 - https://github.com/jeltehomminga/figma-design-skills
 
+Semantic layer & component detection (see docs/agent/figma-semantic-layer-references.md)
+
+- https://github.com/miiimchelle/pattern-pal-pippin
+- https://github.com/YvonneQin/codifig
+- https://github.com/moduesss/desing-lint
+- https://github.com/nesterlabs-ai/nCompose
+- https://github.com/rangle/figma-plugin-missing-library-usage-finder
+- https://github.com/southleft/figmalint
+- https://github.com/championwang00/figma-quick-naming-plugin
+- https://github.com/himanshu-lal4/figma-design-auditor
+- https://github.com/jacksonkasi0/figma-auto-namer
+- https://github.com/wagnerbeethoven/figma-plugin-html-layers
+- https://github.com/debbieyuen/figma-plugin-renaming-layers
+- https://github.com/alvinindra/figma-mcp-rust
+- https://github.com/figma/code-connect
+- https://github.com/bitovi/superconnect
+- https://github.com/redongreen/uSpec
+- https://github.com/destefanis/design-lint
+- https://github.com/Flaex/figma-design-linter
+- https://github.com/7nohe/figram
+- https://www.figma.com/community/plugin/1610840315625561207/intent (Intent, Community)
+- https://www.figma.com/community/plugin/1411822707031516886/autolayers
+- https://www.figma.com/community/plugin/1569668830987093633/ai-auto-naming
+- https://www.figma.com/community/plugin/1626564985947649735/layer-lint
+
 Agent skills & harness
 
 - https://github.com/JuliusBrussee/caveman
