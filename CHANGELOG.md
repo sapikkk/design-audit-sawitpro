@@ -2,11 +2,14 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
-## Unreleased
+## 1.3.0
 
 ### Added
 
-- Dokumen referensi semantic layer & deteksi komponen Figma: `docs/agent/figma-semantic-layer-references.md`; tautan di README, `docs/`, `AGENTS.md`, skill figma-ecosystem-index.
+- Periksa: tombol **Batal** saat pemeriksaan berjalan; audit bisa dihentikan (token + registry + scan).
+- Setelah periksa selesai: tombol **Ayo perbaiki** (dengan jumlah bisa otomatis) menuju halaman Perbaiki; **Periksa lagi** untuk run ulang.
+
+## Unreleased
 
 ## 1.2.9
 

@@ -780,8 +780,10 @@
         <div id="list" style="margin-top:8px"></div>
       </div>
     </div>
-    <div class="action-bar">
+    <div class="action-bar" id="auditActionBar">
+      <button type="button" class="btn btn-secondary btn-lg" id="cancelAuditBtn" hidden>Batal</button>
       <button type="button" class="btn btn-primary btn-lg" id="runBtn">Mulai periksa</button>
+      <button type="button" class="btn btn-primary btn-lg" id="goFixBtn" hidden>Ayo perbaiki</button>
     </div>
   </div>
 
@@ -864,6 +866,7 @@
 <script>
   const $ = (id) => document.getElementById(id);
   let audit = null;
+  let auditBusy = false;
   let lastUndoLog = null;
   let detachScope = 'selection';
   let variableCatalog = [];
@@ -1064,17 +1067,61 @@
     };
   });
 
+  function syncAuditActionBar() {
+    const cancelEl = $('cancelAuditBtn');
+    const runEl = $('runBtn');
+    const fixEl = $('goFixBtn');
+    if (auditBusy) {
+      cancelEl.hidden = false;
+      runEl.hidden = true;
+      fixEl.hidden = true;
+      runEl.disabled = true;
+      return;
+    }
+    runEl.disabled = false;
+    cancelEl.hidden = true;
+    runEl.hidden = false;
+    if (audit) {
+      runEl.textContent = 'Periksa lagi';
+      runEl.className = 'btn btn-secondary btn-lg';
+      fixEl.hidden = false;
+      fixEl.className = 'btn btn-primary btn-lg';
+      const n = audit.violations.filter(canAutoApply).length;
+      fixEl.textContent = n > 0 ? `Ayo perbaiki (${n})` : 'Ayo perbaiki';
+    } else {
+      runEl.textContent = 'Mulai periksa';
+      runEl.className = 'btn btn-primary btn-lg';
+      fixEl.hidden = true;
+    }
+  }
+
+  $('cancelAuditBtn').onclick = () => {
+    post({ type: 'audit-cancel' });
+  };
+
+  $('goFixBtn').onclick = () => {
+    if (!audit) {
+      notice('Jalankan Periksa dulu.');
+      return;
+    }
+    showView('apply');
+    const n = audit.violations.filter(canAutoApply).length;
+    if (n > 0) notice(`${n} temuan bisa diperbaiki otomatis di sini.`);
+  };
+
   $('runBtn').onclick = () => {
     notice('');
     $('progress').textContent = 'Sedang menyiapkan token…';
     showLive();
-    $('runBtn').disabled = true;
+    auditBusy = true;
+    syncAuditActionBar();
     post({
       type: 'audit',
       scope: $('auditScope').value,
       refreshRegistry: $('refreshRegistry').checked
     });
   };
+  syncAuditActionBar();
 
   const TOKEN_ORDER = ['local', 'color', 'spacing', 'radius', 'typography', 'textStyle'];
   const SCAN_LABELS = {
@@ -1507,23 +1554,27 @@
       handleProgress(m);
     } else if (m.type === 'audit-result') {
       audit = m.data;
+      auditBusy = false;
       setOptsCollapsed(true);
-      $('runBtn').disabled = false;
       $('progress').textContent = '';
       hideLive();
       renderAudit();
-      notice('Periksa selesai.');
+      syncAuditActionBar();
+      notice('Periksa selesai. Lanjut ke perbaikan?');
     } else if (m.type === 'apply-result') {
       lastUndoLog = m.undo && (m.undo.changes || []).length ? m.undo : null;
       setUndoAvailable(!!lastUndoLog);
       notice(`Berhasil ${m.applied}, tidak jadi ${m.skipped}.`);
     } else if (m.type === 'variable-catalog') fillCatalogSelects(m.catalog);
     else if (m.type === 'audit-abort') {
-      $('runBtn').disabled = false;
+      auditBusy = false;
       $('progress').textContent = '';
       hideLive();
+      syncAuditActionBar();
+      if (m.reason === 'cancelled') notice('Pemeriksaan dibatalkan.');
     } else if (m.type === 'notice') {
-      $('runBtn').disabled = false;
+      auditBusy = false;
+      syncAuditActionBar();
       if (m.text && m.text.includes('Pilih minimal')) $('progress').textContent = '';
       notice(m.text);
     }

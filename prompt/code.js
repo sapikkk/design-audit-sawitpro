@@ -1,6 +1,6 @@
-// DS Audit Pro — code.js (v1.2.9)
+// DS Audit Pro — code.js (v1.3.0)
 // Berjalan di sandbox Figma. Tidak ada LLM, tidak ada network, tidak ada token di config.
-console.log('[DESIGN AUDIT SAWITPRO] plugin v1.2.9 loaded');
+console.log('[DESIGN AUDIT SAWITPRO] plugin v1.3.0 loaded');
 // Semua token dan komponen ditemukan dari file aktif dan library yang di-enable.
 // Mode: audit, apply, undo (in-memory), annotate, clear-annotations, select.
 
@@ -88,7 +88,7 @@ const FILE_CATEGORY_LABEL = {
   OTHER: 'Lainnya'
 };
 
-const PLUGIN_VERSION = '1.2.9';
+const PLUGIN_VERSION = '1.3.0';
 const PLUGIN_VERSION_LABEL = '1.2';
 
 const UI_DEFAULT_W = 420;
@@ -334,7 +334,14 @@ function cloneRegistryTokens(src) {
   return JSON.parse(JSON.stringify(src));
 }
 
-async function buildRegistryUncached(scope, silent) {
+/** Naikkan token untuk membatalkan audit yang sedang berjalan. */
+let auditRunToken = 0;
+
+function isAuditCancelled(runId) {
+  return runId !== auditRunToken;
+}
+
+async function buildRegistryUncached(scope, silent, cancelCheck) {
   const reg = {
     schemaVersion: '1.1',
     builtAt: new Date().toISOString(),
@@ -414,6 +421,7 @@ async function buildRegistryUncached(scope, silent) {
   let sinceEmit = 0;
   let lastStep = '';
   for (const lv of importQueue) {
+    if (cancelCheck && cancelCheck()) throw new Error('AUDIT_CANCELLED');
     const sid = stepForLibraryVar(lv);
     const st = steps[sid];
     if (st.state === 'pending') st.state = 'loading';
@@ -559,8 +567,9 @@ async function buildRegistry(opts) {
     }
   }
 
+  const cancelCheck = options.cancelCheck;
   const job = (async () => {
-    const reg = await buildRegistryUncached(scope, silent);
+    const reg = await buildRegistryUncached(scope, silent, cancelCheck);
     const { componentKeys, componentNames, ...tokenPart } = reg;
     registryTokenCache = cloneRegistryTokens(tokenPart);
     registryTokenCacheKey = fileKey;
@@ -1222,6 +1231,7 @@ function scanSnapshot(cats) {
 }
 
 async function walk(node, ctx, screen) {
+  if (ctx.auditRunId != null && isAuditCancelled(ctx.auditRunId)) return;
   if (node.visible === false) {
     ctx.hidden++;
     return;
@@ -1233,6 +1243,7 @@ async function walk(node, ctx, screen) {
   ctx.count++;
   if (ctx.count % 500 === 0) await sleep();
   if (ctx.count % 80 === 0 && Date.now() - ctx.lastEmit > 180) {
+    if (ctx.auditRunId != null && isAuditCancelled(ctx.auditRunId)) return;
     ctx.lastEmit = Date.now();
     figma.ui.postMessage({
       type: 'progress',
@@ -1306,6 +1317,10 @@ async function runAudit(msg) {
   try {
     await runAuditInner(msg);
   } catch (e) {
+    if (e && e.message === 'AUDIT_CANCELLED') {
+      figma.ui.postMessage({ type: 'audit-abort', reason: 'cancelled' });
+      return;
+    }
     figma.ui.postMessage({
       type: 'notice',
       text: 'Audit gagal: ' + (e && e.message ? e.message : String(e))
@@ -1315,16 +1330,26 @@ async function runAudit(msg) {
 }
 
 async function runAuditInner(msg) {
+  const runId = ++auditRunToken;
   figma.ui.postMessage({ type: 'progress', done: 0, phase: 'registry' });
   const rules = AUDIT_RULES;
-  const reg = await buildRegistry({ scope: msg.scope || 'page', force: msg.refreshRegistry === true });
+  const reg = await buildRegistry({
+    scope: msg.scope || 'page',
+    force: msg.refreshRegistry === true,
+    cancelCheck: () => isAuditCancelled(runId)
+  });
+  if (isAuditCancelled(runId)) {
+    figma.ui.postMessage({ type: 'audit-abort', reason: 'cancelled' });
+    return;
+  }
 
   const cats = {};
   for (const c of CATEGORIES) cats[c] = { total: 0, passed: 0 };
   figma.ui.postMessage({ type: 'progress', done: 0, phase: 'scan', scanCats: scanSnapshot(cats) });
   const ctx = {
     rules, reg, cats, violations: [], hidden: 0, count: 0, unresolved: 0,
-    page: '', pageNames: [], usedVariableIds: new Set(), noTokensSkipped: 0, lastEmit: 0
+    page: '', pageNames: [], usedVariableIds: new Set(), noTokensSkipped: 0, lastEmit: 0,
+    auditRunId: runId
   };
 
   if (msg.scope === 'selection') {
@@ -1337,7 +1362,10 @@ async function runAuditInner(msg) {
     }
     ctx.page = figma.currentPage.name;
     ctx.pageNames.push(ctx.page);
-    for (const node of roots) await walk(node, ctx, null);
+    for (const node of roots) {
+      await walk(node, ctx, null);
+      if (isAuditCancelled(runId)) break;
+    }
   } else {
     let pages;
     if (msg.scope === 'all') {
@@ -1347,11 +1375,20 @@ async function runAuditInner(msg) {
       pages = [figma.currentPage];
     }
     for (const page of pages) {
+      if (isAuditCancelled(runId)) break;
       await loadPageIfNeeded(page);
       ctx.page = page.name;
       ctx.pageNames.push(page.name);
-      for (const child of page.children) await walk(child, ctx, null);
+      for (const child of page.children) {
+        await walk(child, ctx, null);
+        if (isAuditCancelled(runId)) break;
+      }
     }
+  }
+
+  if (isAuditCancelled(runId)) {
+    figma.ui.postMessage({ type: 'audit-abort', reason: 'cancelled' });
+    return;
   }
 
   const score = computeScore(cats, rules.weights);
@@ -1829,6 +1866,10 @@ async function selectNodes(ids) {
 figma.ui.onmessage = async (msg) => {
   try {
     if (msg.type === 'audit') await runAudit(msg);
+    else if (msg.type === 'audit-cancel') {
+      auditRunToken++;
+      figma.ui.postMessage({ type: 'audit-abort', reason: 'cancelled' });
+    }
     else if (msg.type === 'apply') await applyChanges(msg.items || []);
     else if (msg.type === 'undo') await undoChanges(msg.log || {});
     else if (msg.type === 'annotate') await annotate(msg.violations || []);
