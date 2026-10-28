@@ -2,6 +2,17 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## 1.3.1
+
+### Added
+
+- Ringkasan **instance** setelah periksa (total, library vs lokal, komponen paling sering).
+- Kartu temuan komponen menampilkan nama component set / variant + sumber library atau lokal.
+
+### Changed
+
+- README root dan `prompt/README.md` selaras versi 1.3.x dan alur Periksa → Perbaiki.
+
 ## 1.3.0
 
 ### Added

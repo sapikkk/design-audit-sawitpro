@@ -1,6 +1,6 @@
-// DS Audit Pro — code.js (v1.3.0)
+// DS Audit Pro — code.js (v1.3.1)
 // Berjalan di sandbox Figma. Tidak ada LLM, tidak ada network, tidak ada token di config.
-console.log('[DESIGN AUDIT SAWITPRO] plugin v1.3.0 loaded');
+console.log('[DESIGN AUDIT SAWITPRO] plugin v1.3.1 loaded');
 // Semua token dan komponen ditemukan dari file aktif dan library yang di-enable.
 // Mode: audit, apply, undo (in-memory), annotate, clear-annotations, select.
 
@@ -88,7 +88,7 @@ const FILE_CATEGORY_LABEL = {
   OTHER: 'Lainnya'
 };
 
-const PLUGIN_VERSION = '1.3.0';
+const PLUGIN_VERSION = '1.3.1';
 const PLUGIN_VERSION_LABEL = '1.2';
 
 const UI_DEFAULT_W = 420;
@@ -915,6 +915,35 @@ function checkDetached(node, ctx, base) {
   if (match) addViolation(ctx, base, 'COMPONENT', 'HIGH', 'Mungkin lepas dari komponen, cek manual');
 }
 
+function componentSetName(main) {
+  if (!main) return '';
+  return main.parent && main.parent.type === 'COMPONENT_SET' ? main.parent.name : main.name;
+}
+
+function componentIdentityExtra(main) {
+  const setName = componentSetName(main);
+  const label = setName && setName !== main.name ? `${setName} / ${main.name}` : main.name;
+  return {
+    mainComponentName: main.name,
+    mainComponentKey: main.key,
+    componentSetName: setName,
+    fromLibrary: main.remote === true,
+    targetVariableName: label,
+    currentValue: main.name
+  };
+}
+
+function recordInstanceSummary(ctx, main) {
+  if (!ctx.instanceSummary) {
+    ctx.instanceSummary = { total: 0, fromLibrary: 0, local: 0, byComponent: {} };
+  }
+  ctx.instanceSummary.total++;
+  if (main.remote === true) ctx.instanceSummary.fromLibrary++;
+  else ctx.instanceSummary.local++;
+  const key = componentSetName(main);
+  ctx.instanceSummary.byComponent[key] = (ctx.instanceSummary.byComponent[key] || 0) + 1;
+}
+
 // Instance sah = main component berasal dari library (remote).
 // Komponen lokal di file sprint dianggap di luar library tim.
 async function checkInstance(node, ctx, base) {
@@ -927,12 +956,18 @@ async function checkInstance(node, ctx, base) {
   }
   if (!main) {
     count(ctx, 'COMPONENT', false);
-    addViolation(ctx, base, 'COMPONENT', 'HIGH', 'Instance yatim (main component hilang)');
+    addViolation(ctx, base, 'COMPONENT', 'HIGH', 'Instance yatim (main component hilang)', {
+      nodeType: 'INSTANCE'
+    });
     return;
   }
+  recordInstanceSummary(ctx, main);
   const ok = main.remote === true;
   count(ctx, 'COMPONENT', ok);
-  if (!ok) addViolation(ctx, base, 'COMPONENT', 'HIGH', `Komponen lokal "${main.name}", bukan dari library tim`);
+  const compExtra = { nodeType: 'INSTANCE', ...componentIdentityExtra(main) };
+  if (!ok) {
+    addViolation(ctx, base, 'COMPONENT', 'HIGH', `Komponen lokal "${main.name}", bukan dari library tim`, compExtra);
+  }
 }
 
 function checkAutoLayout(node, ctx, base, isScreen) {
@@ -1296,6 +1331,22 @@ function tokenCoveragePercent(cats) {
   return total > 0 ? (passed / total) * 100 : 100;
 }
 
+function summarizeInstances(raw) {
+  if (!raw || !raw.total) {
+    return { total: 0, fromLibrary: 0, local: 0, topComponents: [] };
+  }
+  const topComponents = Object.entries(raw.byComponent || {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12)
+    .map(([name, count]) => ({ name, count }));
+  return {
+    total: raw.total,
+    fromLibrary: raw.fromLibrary,
+    local: raw.local,
+    topComponents
+  };
+}
+
 function variableUsageSummary(reg, usedVariableIds) {
   const all = [
     ...reg.colorVariables,
@@ -1411,6 +1462,7 @@ async function runAuditInner(msg) {
     hiddenSkipped: ctx.hidden,
     noTokensSkipped: ctx.noTokensSkipped,
     unresolvedInstances: ctx.unresolved,
+    instanceSummary: summarizeInstances(ctx.instanceSummary),
     modeLintIssues,
     variableCatalog,
     registrySummary: {

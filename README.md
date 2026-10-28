@@ -1,66 +1,64 @@
 # DESIGN AUDIT SAWITPRO
 
-Plugin Figma untuk **mengaudit kepatuhan Design System** di file desain SawitPRO. Audit **deterministik** di dalam plugin: **tanpa LLM**, **tanpa export/import JSON dari UI**, **tanpa REST API**, **tanpa menyimpan token** di repository.
+Plugin Figma untuk mengaudit kepatuhan Design System di file desain SawitPRO (PetaniPRO, RamPRO, TimPRO, Toko Sawit, sprint species master, dan portofolio aplikasi lain). Audit deterministik di dalam plugin: tanpa LLM, tanpa export JSON dari UI, tanpa REST API, tanpa menyimpan token di repository.
 
-**Repo GitHub:** [github.com/sapikkk/design-audit-sawitpro](https://github.com/sapikkk/design-audit-sawitpro)
-
-**Versi plugin (prompt/):** 2.2 — lihat [`CHANGELOG.md`](CHANGELOG.md).
+**Repo:** [github.com/sapikkk/design-audit-sawitpro](https://github.com/sapikkk/design-audit-sawitpro)  
+**Versi plugin:** 1.3.1 (runtime `PLUGIN_VERSION` di `prompt/code.js`) — riwayat lengkap [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
-## Peta repo (jelas)
+## Peta repo
 
 | Path | Isi |
 |------|-----|
-| [`prompt/`](prompt/) | **Plugin siap pakai** — `code.js`, `ui.html`, `rules.json`, ikon |
-| [`manifest.json`](manifest.json) | Entry Figma → arahkan ke `prompt/` |
-| [`icon.png`](icon.png) | Ikon 128×128 untuk **Publish** plugin org |
-| [`docs/agent/`](docs/agent/) | Perbandingan Community, MCP DS, publish icon, referensi semantic layer |
-| [`AGENTS.md`](AGENTS.md) | Aturan agent + **commit/push otomatis** |
-| Root `code.ts` | Template resmi Figma (stub); plugin lengkap di `prompt/` |
+| [`prompt/`](prompt/) | Plugin: `code.js`, `ui.html`, `rules.json`, ikon |
+| [`manifest.json`](manifest.json) | Entry Figma → `prompt/` |
+| [`figma-dev/`](figma-dev/) | Bundle setelah `npm run figma:bundle` |
+| [`docs/agent/`](docs/agent/) | Community parity, MCP DS, publish, referensi semantic layer |
+| [`AGENTS.md`](AGENTS.md) | Panduan agent + commit/push |
 
 ---
 
-## Fitur utama (v2.2)
+## Alur pengguna (Periksa → Perbaiki)
 
-| Tab | Fungsi |
-|-----|--------|
-| **Audit** | Seleksi / halaman / semua file · skor · coverage token · filter & grup ×N |
-| **Apply** | Bind **EXACT** (fill/stroke/spacing/type) · undo · anotasi `🔍 DS Audit` |
-| **Tools** | Detach variabel · remap A→B pada seleksi · `[no-tokens]` di deskripsi komponen |
+1. Beranda: **Periksa**, **Perbaiki**, **Alat**.
+2. **Periksa:** pilih cakupan (seleksi / halaman / semua) → **Mulai periksa**. Saat berjalan ada **Batal**.
+3. Hasil: skor, tab kategori (Warna, Spacing, Komponen, …), baris nilai → variabel atau nama komponen library.
+4. **Ayo perbaiki** (setelah selesai) membuka **Perbaiki** untuk temuan yang bisa otomatis (EXACT + NEAR warna/spacing/font dalam ambang `rules.json`).
+5. **Alat:** detach variabel, remap A→B, anotasi halaman (menu di Perbaiki).
+
+Detail instalasi dan batasan API: [`prompt/README.md`](prompt/README.md).  
+Checklist tim: [`docs/agent/team-rollout.md`](docs/agent/team-rollout.md).
+
+---
+
+## Fitur audit (ringkas)
+
+| Area | Perilaku |
+|------|----------|
+| Token | Warna, spacing, radius, tipografi dari library yang enabled |
+| Apply otomatis | Bind variabel (exact + near), text style exact |
+| Komponen | INSTANCE → main component + library vs lokal; ringkasan instance di hasil periksa |
+| Penamaan | Pola `rules.json` (Screen/, Button/, Text/, …) |
+| Komponen `[no-tokens]` | Subtree instance dilewati |
 
 Parity vs plugin Community: [`docs/agent/community-linter-comparison.md`](docs/agent/community-linter-comparison.md).
 
-Roadmap referensi (deteksi komponen, rename semantic): [`docs/agent/figma-semantic-layer-references.md`](docs/agent/figma-semantic-layer-references.md). Plugin saat ini fokus audit variabel/komponen library via INSTANCE + penamaan `rules.json`; fingerprint struktural belum ada.
-
----
-
-## Cara kerja
-
-```mermaid
-flowchart LR
-  A[File Figma + library DS] --> B[Audit]
-  B --> C[Temuan + skor]
-  C --> D[Apply / Tools]
-  L[DS 3.0 Color library] --> B
-```
-
-1. Aktifkan library Design System di file.
-2. Import plugin dari [`manifest.json`](manifest.json).
-3. Jalankan audit → perbaiki via Apply/Tools.
-
-Detail: [`prompt/README.md`](prompt/README.md).
-
-**Checklist tim (import → audit → publish):** [`docs/agent/team-rollout.md`](docs/agent/team-rollout.md).
+Roadmap deteksi komponen (fingerprint frame vs library, rename semantic): [`docs/agent/figma-semantic-layer-references.md`](docs/agent/figma-semantic-layer-references.md). Level A (nama main component pada INSTANCE) sudah di hasil audit; fingerprint struktural (level B) belum.
 
 ---
 
 ## Instalasi
 
-1. Clone repo.
-2. Figma → **Plugins → Development → Import plugin from manifest** → pilih `manifest.json` di root.
-3. Sesuaikan `"id"` di manifest dengan plugin development Anda.
-4. Publish org (opsional): [`docs/agent/figma-plugin-icon-publish.md`](docs/agent/figma-plugin-icon-publish.md).
+```bash
+git clone https://github.com/sapikkk/design-audit-sawitpro.git
+cd design-audit-sawitpro
+npm run figma:bundle   # opsional, untuk figma-dev/
+```
+
+Figma Desktop → **Plugins → Development → Import plugin from manifest** → [`manifest.json`](manifest.json) di root. Aktifkan library DS di file yang diaudit.
+
+Publish org: [`docs/agent/figma-plugin-icon-publish.md`](docs/agent/figma-plugin-icon-publish.md).
 
 ---
 
@@ -72,11 +70,15 @@ Detail: [`prompt/README.md`](prompt/README.md).
 | 75–89 | PASS_WITH_WARNING |
 | &lt; 75 | REJECTED |
 
-Kategori **VARIABLE** (bind orphan/alias) ikut bobot — lihat `prompt/rules.json`.
+Bobot kategori: [`prompt/rules.json`](prompt/rules.json).
 
 ---
 
-## Kontribusi & git
+## Development
 
-- Setelah perubahan: **commit + push** (kebijakan repo: `.cursor/rules/auto-push.mdc`).
-- Issue/PR: repositori **design-audit-sawitpro**.
+```bash
+npm run figma:check    # syntax, SES, versi
+npm run figma:bundle   # sync figma-dev/
+```
+
+Setelah ubah `prompt/`: commit + push ke `main` (lihat [`AGENTS.md`](AGENTS.md)).

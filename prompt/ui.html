@@ -1278,6 +1278,14 @@
     if (v.category === 'TYPOGRAPHY' && v.targetVariableName && v.field === 'textStyleId') {
       return v.currentValue ? `${v.currentValue} → ${v.targetVariableName}` : v.targetVariableName;
     }
+    if (v.mainComponentName || v.componentSetName) {
+      const label = v.targetVariableName
+        || (v.componentSetName && v.componentSetName !== v.mainComponentName
+          ? `${v.componentSetName} / ${v.mainComponentName}`
+          : (v.mainComponentName || v.componentSetName));
+      const src = v.fromLibrary === true ? ' · library tim' : (v.fromLibrary === false ? ' · lokal' : '');
+      return `${label}${src}`;
+    }
     return '';
   }
   function setOptsCollapsed(on) {
@@ -1302,6 +1310,12 @@
     const [badgeCls, badgeLabel] = statusBadge(audit.status);
     const rs = audit.registrySummary || {};
     const tokenLine = `Acuan Design System SawitPRO: ${fmt(rs.colorVariables)} warna · ${fmt(rs.spacingVariables)} spacing · ${fmt(rs.radiusVariables)} radius · ${fmt(rs.typographyVariables)} font · ${fmt(rs.textStyles)} gaya teks`;
+    const ins = audit.instanceSummary || {};
+    const instLine = ins.total
+      ? `${fmt(ins.total)} instance (${fmt(ins.fromLibrary)} library · ${fmt(ins.local)} lokal)`
+      : '';
+    const topComp = (ins.topComponents || []).slice(0, 3).map((c) => `${c.name} ×${c.count}`).join(', ');
+    const metaTitle = [tokenLine, instLine, topComp ? 'Terbanyak: ' + topComp : ''].filter(Boolean).join('\n');
 
     $('auditHead').classList.add('has-result');
     $('summary').innerHTML = `
@@ -1311,7 +1325,7 @@
           <span class="badge ${badgeCls}">${esc(badgeLabel)}</span>
         </div>
         <div class="subtle" style="margin-top:2px">Kesesuaian dengan Design System SawitPRO</div>
-        <div class="summary-meta" title="${esc(tokenLine)}">${esc(audit.fileName)} · ${fmt(audit.nodeCount)} layer · ${exact} bisa otomatis</div>
+        <div class="summary-meta" title="${esc(metaTitle)}">${esc(audit.fileName)} · ${fmt(audit.nodeCount)} layer · ${exact} bisa otomatis${instLine ? ' · ' + esc(instLine) : ''}</div>
       </div>`;
     $('filterBar').style.display = '';
     $('listToggles').style.display = '';

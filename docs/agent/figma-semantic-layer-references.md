@@ -23,7 +23,7 @@ Kebanyakan repo di bawah ini level B atau C. Level A sudah tersedia di API; plug
 | nCompose | https://github.com/nesterlabs-ai/nCompose | `src/figma/component-discovery.ts` untuk design-to-code. |
 | Missing library usage finder | https://github.com/rangle/figma-plugin-missing-library-usage-finder | Cari instance by nama component set, bukan reverse-match frame mentah. |
 
-**SawitPRO DESIGN AUDIT (plugin repo ini):** INSTANCE → cek library remote + pola penamaan di `prompt/rules.json` (`Card/…`, `Button/…`, dll.). Belum ada fingerprint struktural seperti Intent atau Pattern Pal.
+**SawitPRO DESIGN AUDIT (plugin repo ini):** Level A: INSTANCE → `getMainComponentAsync`, ringkasan instance + label library/lokal di UI (v1.3.1). Level B: pola penamaan + heuristic detached di `rules.json`; fingerprint struktural seperti Intent/Pattern Pal belum.
 
 ## Level C: penamaan semantic
 

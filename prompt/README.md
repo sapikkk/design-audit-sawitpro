@@ -5,48 +5,50 @@ Plugin Figma untuk mengaudit kepatuhan Design System. Tanpa LLM, tanpa REST API,
 ## Prinsip
 
 - Token tidak disimpan di repo. Variabel dan text style dibaca dari file terbuka + library yang di-enable.
-- **Semua alur di dalam plugin:** audit, daftar temuan, apply EXACT, undo in-memory, anotasi.
-- **Aturan audit** (`rules.json`) disematkan di `code.js` (`AUDIT_RULES`). Ubah bobot/ambang di repo → sync ke `AUDIT_RULES` → re-import plugin.
-
-## Isi folder
-
-```
-manifest.json, code.js, ui.html   — plugin
-rules.json                          — sumber aturan (disalin ke code.js)
-aggregate.js                        — opsional/dev; tidak dipakai alur plugin
-```
+- Semua alur di dalam plugin: periksa, daftar temuan, perbaiki otomatis (EXACT/NEAR), undo in-memory, anotasi.
+- Aturan audit (`rules.json`) disematkan di `code.js` (`AUDIT_RULES`). Ubah bobot/ambang di repo → sync → re-import plugin.
 
 ## Instalasi
 
 1. Clone repo.
-2. Figma Desktop → **Resources → Plugins & widgets → Development → Import from manifest…** → pilih **`manifest.json` di root repo** (bukan hanya folder `prompt/`).
-3. Pastikan `"id"` di manifest sesuai plugin development Figma Anda.
-4. Di file yang diaudit: aktifkan library DS (Assets → Libraries).
+2. Figma Desktop → **Import from manifest** → `manifest.json` di **root** repo.
+3. Aktifkan library DS di file (Assets → Libraries).
+4. Setelah edit kode: tutup panel plugin, jalankan lagi (import ulang hanya jika manifest/pindah folder).
 
-**Setelah import:** edit kode → tutup panel plugin → jalankan lagi (import ulang hanya jika pindah folder / ubah manifest).
-
-Checklist lengkap: [`../docs/agent/team-rollout.md`](../docs/agent/team-rollout.md).
-
-**Ikon brand di bar atas Figma (bukan di dalam panel):** upload [`../icon.png`](../icon.png) saat **Publish plugin** (org privat SawitPRO). Panduan: [`../docs/agent/figma-plugin-icon-publish.md`](../docs/agent/figma-plugin-icon-publish.md).
+Checklist: [`../docs/agent/team-rollout.md`](../docs/agent/team-rollout.md).  
+Ikon publish org: [`../docs/agent/figma-plugin-icon-publish.md`](../docs/agent/figma-plugin-icon-publish.md).
 
 ## Alur harian
 
-1. Buka file Figma (sprint, Species Master, DS, produk, platform, …).
-2. Tab **Audit** → pilih cakupan **Seleksi / Halaman / Semua**.
-3. Konteks file otomatis dari nama file; penanggung jawab opsional.
-4. **Jalankan audit** — skor, bar coverage token, stat variabel, filter, **kelompokkan ×N**, klik baris → fokus layer (multi-select jika grup).
-5. Tab **Apply:** terapkan EXACT, pulihkan, anotasi halaman `🔍 DS Audit`.
-6. Tab **Tools:** detach variabel (seleksi/halaman), remap token A→B pada seleksi, muat katalog variabel dari library.
+1. Buka file sprint / species master / full app.
+2. **Periksa** → cakupan → **Mulai periksa** ( **Batal** jika perlu ).
+3. Baca skor, filter kategori, klik temuan → layer terpilih. Baris bawah kartu: hex/px → variabel, atau nama komponen library pada INSTANCE.
+4. **Ayo perbaiki** → halaman **Perbaiki** (kategori sama, perbaiki semua otomatis atau per baris).
+5. **Alat** / menu titik tiga: detach, remap, anotasi.
 
-**`[no-tokens]`** di deskripsi komponen → instance + subtree dilewati (sama seperti Variables audit).
+Komponen dengan `[no-tokens]` di deskripsi: instance + subtree tidak diperiksa.
 
-Perbandingan Community: [`../docs/agent/community-linter-comparison.md`](../docs/agent/community-linter-comparison.md).
+## Perbaikan otomatis
 
-Referensi GitHub untuk semantic layer dan deteksi komponen (level A/B/C, di luar scope audit token saat ini): [`../docs/agent/figma-semantic-layer-references.md`](../docs/agent/figma-semantic-layer-references.md).
+| Kategori | Kondisi apply |
+|----------|----------------|
+| Warna | EXACT hex atau NEAR (ΔE ≤ `nearMatchColorApplyDeltaE`) |
+| Spacing / radius / lebar·tinggi | EXACT px atau NEAR (± `nearMatchSpacingApplyPx`) |
+| Ukuran font | NEAR/EXACT ke variabel font |
+| Text style | EXACT ke gaya teks di file |
+
+## Komponen (INSTANCE)
+
+Setiap INSTANCE dihitung di ringkasan: total, dari library tim vs lokal, tiga komponen paling sering. Temuan komponen menampilkan nama component set / variant. Detached frame tetap heuristic nama; fingerprint struktural direncanakan (lihat doc referensi).
+
+## Dokumen terkait
+
+- Community parity: [`../docs/agent/community-linter-comparison.md`](../docs/agent/community-linter-comparison.md)
+- Semantic layer / roadmap: [`../docs/agent/figma-semantic-layer-references.md`](../docs/agent/figma-semantic-layer-references.md)
 
 ## Skor
 
-- ≥ 90: EXCELLENT · 75–89: PASS_WITH_WARNING · &lt; 75: REJECTED
+≥ 90 EXCELLENT · 75–89 PASS_WITH_WARNING · &lt; 75 REJECTED
 
 ## Batasan API (ringkas)
 
@@ -54,6 +56,4 @@ Referensi GitHub untuk semantic layer dan deteksi komponen (level A/B/C, di luar
 | :--- | :--- |
 | Variabel lokal + library (enabled) | Ya |
 | Text style library (daftar) | Tidak — style yang sudah dipakai bisa dikenali |
-| Komponen library (daftar) | Tidak — instance dari library dianggap sah |
-
-Lihat bagian batasan lengkap di dokumen asli spesifikasi jika diperlukan.
+| Komponen library | Instance remote dianggap sah; daftar master tidak diimpor penuh untuk apply |
