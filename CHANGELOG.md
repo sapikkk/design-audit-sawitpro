@@ -2,6 +2,12 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## 1.3.2
+
+### Fixed
+
+- **Tandai di halaman:** anotasi tidak lagi menempel ratusan label di koordinat layer (tumpuk di kanvas). Kartu disusun kolom per halaman sumber di «🔍 DS Audit», maks. 120, prioritas HIGH dulu, teks pakai `issue` (bukan suggestion panjang).
+
 ## 1.3.1
 
 ### Added

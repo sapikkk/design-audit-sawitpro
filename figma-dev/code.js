@@ -1,11 +1,13 @@
-// DS Audit Pro — code.js (v1.3.1)
+// DS Audit Pro — code.js (v1.3.2)
 // Berjalan di sandbox Figma. Tidak ada LLM, tidak ada network, tidak ada token di config.
-console.log('[DESIGN AUDIT SAWITPRO] plugin v1.3.1 loaded');
+console.log('[DESIGN AUDIT SAWITPRO] plugin v1.3.2 loaded');
 // Semua token dan komponen ditemukan dari file aktif dan library yang di-enable.
 // Mode: audit, apply, undo (in-memory), annotate, clear-annotations, select.
 
 const ANNOTATION_PAGE = '🔍 DS Audit';
-const MAX_ANNOTATIONS = 500;
+const MAX_ANNOTATIONS = 120;
+const ANNOTATE_COL_W = 360;
+const ANNOTATE_GAP = 10;
 const CATEGORIES = ['AUTO_LAYOUT', 'TYPOGRAPHY', 'COLOR', 'SPACING', 'COMPONENT', 'NAMING', 'VARIABLE'];
 const NO_TOKENS_TAG = /\[no-tokens\]/i;
 const DEFAULT_NAME = /^(Frame|Rectangle|Group|Vector|Text|Ellipse) \d+$/;
@@ -88,7 +90,7 @@ const FILE_CATEGORY_LABEL = {
   OTHER: 'Lainnya'
 };
 
-const PLUGIN_VERSION = '1.3.1';
+const PLUGIN_VERSION = '1.3.2';
 const PLUGIN_VERSION_LABEL = '1.2';
 
 const UI_DEFAULT_W = 420;
@@ -1619,25 +1621,76 @@ async function clearAnnotations() {
   figma.ui.postMessage({ type: 'notice', text: 'Anotasi dihapus.' });
 }
 
+function annotatePriority(list) {
+  const rank = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+  return list.slice().sort((a, b) => {
+    const ra = rank[a.severity] != null ? rank[a.severity] : 3;
+    const rb = rank[b.severity] != null ? rank[b.severity] : 3;
+    if (ra !== rb) return ra - rb;
+    return (a.layerName || '').localeCompare(b.layerName || '');
+  });
+}
+
+function annotateCardText(v, st) {
+  const head = `[${st.prefix}] ${v.layerName || 'layer'}`;
+  const body = v.issue || v.suggestion || '';
+  return trunc(`${head} — ${body}`, 72);
+}
+
 async function annotate(violations) {
   const page = await getAnnotationPage();
   page.children.slice().forEach((n) => n.remove());
   await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
+  await figma.loadFontAsync({ family: 'Inter', style: 'Bold' });
 
-  // Setiap halaman sumber diberi kolom horizontal sendiri supaya tidak tumpang tindih.
-  const offsets = {};
-  let idx = 0;
-  for (const v of violations) {
-    if (!(v.page in offsets)) offsets[v.page] = (idx++) * 20000;
+  const sorted = annotatePriority(violations || []);
+  const total = sorted.length;
+  const slice = sorted.slice(0, MAX_ANNOTATIONS);
+
+  const pages = [];
+  const pageIndex = {};
+  for (const v of slice) {
+    const key = v.page || 'Tanpa halaman';
+    if (!(key in pageIndex)) {
+      pageIndex[key] = pages.length;
+      pages.push(key);
+    }
   }
 
   let n = 0;
-  for (const v of violations.slice(0, MAX_ANNOTATIONS)) {
-    const node = await figma.getNodeByIdAsync(v.id);
-    if (!node || !node.absoluteBoundingBox) continue;
-    const bb = node.absoluteBoundingBox;
+  const colY = pages.map(() => 0);
+
+  for (const pageName of pages) {
+    const col = pageIndex[pageName];
+    const header = figma.createFrame();
+    header.name = `section ${pageName}`;
+    header.layoutMode = 'HORIZONTAL';
+    header.primaryAxisSizingMode = 'AUTO';
+    header.counterAxisSizingMode = 'AUTO';
+    header.paddingLeft = 8;
+    header.paddingRight = 8;
+    header.paddingTop = 6;
+    header.paddingBottom = 6;
+    header.cornerRadius = 6;
+    header.fills = [{ type: 'SOLID', color: { r: 0.12, g: 0.12, b: 0.14 } }];
+    const ht = figma.createText();
+    ht.fontName = { family: 'Inter', style: 'Bold' };
+    ht.fontSize = 12;
+    ht.characters = pageName;
+    ht.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
+    header.appendChild(ht);
+    page.appendChild(header);
+    header.x = col * ANNOTATE_COL_W;
+    header.y = colY[col];
+    colY[col] += header.height + ANNOTATE_GAP;
+  }
+
+  for (const v of slice) {
     const st = ANNOTATION_STYLE[v.subCategory] || ANNOTATION_STYLE[v.category] || ANNOTATION_STYLE.NAMING;
-    const label = trunc(`[${st.prefix}] ${v.suggestion || v.issue}`, 60);
+    const label = annotateCardText(v, st);
+    const col = pageIndex[v.page || 'Tanpa halaman'] != null
+      ? pageIndex[v.page || 'Tanpa halaman']
+      : 0;
 
     const frame = figma.createFrame();
     frame.name = `ann ${v.id}`;
@@ -1646,8 +1699,8 @@ async function annotate(violations) {
     frame.counterAxisSizingMode = 'AUTO';
     frame.paddingLeft = 6;
     frame.paddingRight = 6;
-    frame.paddingTop = 3;
-    frame.paddingBottom = 3;
+    frame.paddingTop = 4;
+    frame.paddingBottom = 4;
     frame.cornerRadius = 4;
     frame.fills = [{ type: 'SOLID', color: hexToRgb(st.color) }];
 
@@ -1659,11 +1712,17 @@ async function annotate(violations) {
 
     frame.appendChild(t);
     page.appendChild(frame);
-    frame.x = bb.x + bb.width + 8 + (offsets[v.page] || 0);
-    frame.y = bb.y;
+    frame.x = col * ANNOTATE_COL_W;
+    frame.y = colY[col];
+    colY[col] += frame.height + 6;
     n++;
   }
-  figma.ui.postMessage({ type: 'notice', text: `Anotasi dibuat: ${n} di halaman "${ANNOTATION_PAGE}".` });
+
+  let msg = `Anotasi: ${n} kartu di halaman «${ANNOTATION_PAGE}». Buka halaman itu (bukan file desain).`;
+  if (total > MAX_ANNOTATIONS) {
+    msg += ` ${total - MAX_ANNOTATIONS} temuan lain tidak ditandai (prioritas penting dulu).`;
+  }
+  figma.ui.postMessage({ type: 'notice', text: msg });
 }
 
 // ---------- Seleksi ----------

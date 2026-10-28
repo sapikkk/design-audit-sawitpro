@@ -1540,7 +1540,16 @@
 
   $('annotateBtn').onclick = () => {
     if (!audit) { notice('Jalankan Periksa dulu.'); return; }
+    const n = audit.violations.length;
+    const cap = 120;
+    if (n > cap) {
+      const ok = confirm(
+        `Ada ${n} temuan. Maks. ${cap} kartu di halaman «🔍 DS Audit» (penting dulu, tanpa tumpuk di kanvas desain).\n\nLanjut?`
+      );
+      if (!ok) return;
+    }
     post({ type: 'annotate', violations: audit.violations });
+    notice('Membuat anotasi di halaman 🔍 DS Audit…');
   };
   $('clearBtn').onclick = () => post({ type: 'clear-annotations' });
 

@@ -24,7 +24,7 @@ Ikon publish org: [`../docs/agent/figma-plugin-icon-publish.md`](../docs/agent/f
 2. **Periksa** → cakupan → **Mulai periksa** ( **Batal** jika perlu ).
 3. Baca skor, filter kategori, klik temuan → layer terpilih. Baris bawah kartu: hex/px → variabel, atau nama komponen library pada INSTANCE.
 4. **Ayo perbaiki** → halaman **Perbaiki** (kategori sama, perbaiki semua otomatis atau per baris).
-5. **Alat** / menu titik tiga: detach, remap, anotasi.
+5. **Alat** / menu titik tiga: detach, remap. **Tandai di halaman** membuat daftar kartu di halaman terpisah «🔍 DS Audit» (bukan stiker di atas kanvas desain), maks. 120 temuan penting dulu.
 
 Komponen dengan `[no-tokens]` di deskripsi: instance + subtree tidak diperiksa.
 
