@@ -1,6 +1,6 @@
-// DS Audit Pro — code.js (v1.3.2)
+// DS Audit Pro — code.js (v1.3.3)
 // Berjalan di sandbox Figma. Tidak ada LLM, tidak ada network, tidak ada token di config.
-console.log('[DESIGN AUDIT SAWITPRO] plugin v1.3.2 loaded');
+console.log('[DESIGN AUDIT SAWITPRO] plugin v1.3.3 loaded');
 // Semua token dan komponen ditemukan dari file aktif dan library yang di-enable.
 // Mode: audit, apply, undo (in-memory), annotate, clear-annotations, select.
 
@@ -90,7 +90,7 @@ const FILE_CATEGORY_LABEL = {
   OTHER: 'Lainnya'
 };
 
-const PLUGIN_VERSION = '1.3.2';
+const PLUGIN_VERSION = '1.3.3';
 const PLUGIN_VERSION_LABEL = '1.2';
 
 const UI_DEFAULT_W = 420;
@@ -810,6 +810,9 @@ function matchColor(hex, reg, nearDeltaE, applyDeltaE) {
 
 function canApplyViolation(it) {
   if (!it) return false;
+  if (it.category === 'NAMING' && it.suggestedName) {
+    return it.suggestedName !== it.layerName;
+  }
   if (it.matchType === 'EXACT') {
     return !!(it.targetVariableKey || it.targetVariableId || it.targetStyleKey || it.targetStyleId);
   }
@@ -892,10 +895,87 @@ function addViolation(ctx, base, category, severity, issue, extra) {
 
 // ---------- Pengecekan per node ----------
 
-function checkNaming(node, ctx, base, isScreen) {
-  if (!['FRAME', 'COMPONENT', 'INSTANCE', 'TEXT', 'GROUP'].includes(node.type)) return;
-  const p = ctx.rules.namingPatterns;
-  let ok = true, issue = '', pattern = null;
+const NAMING_NODE_TYPES = ['FRAME', 'COMPONENT', 'INSTANCE', 'TEXT', 'GROUP'];
+
+function namingSlug(raw) {
+  let slug = String(raw || '')
+    .replace(/^(Frame|Rectangle|Group|Vector|Text|Ellipse)\s+\d+$/i, '')
+    .trim()
+    .replace(/[^\w\s/-]/g, ' ')
+    .replace(/\s+/g, '-')
+    .replace(/\/+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  if (!slug) slug = 'Layer';
+  if (slug.length > 48) slug = slug.slice(0, 48);
+  return slug || 'Layer';
+}
+
+function namingTrailingNum(name) {
+  const m = String(name || '').match(/(\d+)$/);
+  return m ? m[1] : '1';
+}
+
+function textRoleFromNode(node) {
+  if (node.fontSize === figma.mixed) return 'Body';
+  const sz = node.fontSize;
+  if (sz >= 24) return 'Header';
+  if (sz >= 15) return 'Body';
+  if (sz >= 11) return 'Caption';
+  return 'Label';
+}
+
+function componentPrefixFromLayerName(name) {
+  const prefixes = ['Card', 'Button', 'Navbar', 'Input', 'Modal'];
+  for (const p of prefixes) {
+    if (new RegExp('^' + p + '(\\b|/)', 'i').test(name || '')) return p;
+  }
+  return 'Button';
+}
+
+function namePassesNamingRules(name, node, rules, isScreen) {
+  if (DEFAULT_NAME.test(name)) return false;
+  let pattern = null;
+  if (isScreen) pattern = rules.namingPatterns.screen;
+  else if (node.type === 'COMPONENT' || node.type === 'INSTANCE') pattern = rules.namingPatterns.component;
+  else if (node.type === 'TEXT') pattern = rules.namingPatterns.text;
+  if (pattern) return new RegExp(pattern).test(name);
+  return true;
+}
+
+function proposeLayerName(node, rules, isScreen, issue) {
+  if (!issue) return null;
+  const num = namingTrailingNum(node.name);
+  if (issue === 'Nama layer bawaan Figma') {
+    if (isScreen && node.type === 'FRAME') return `Screen/Screen-${num}`;
+    if (node.type === 'TEXT') return `Text/${textRoleFromNode(node)}`;
+    if (node.type === 'GROUP') return `Surface/Group-${num}`;
+    if (/^(Vector|Ellipse)/.test(node.name)) return `Icon/Icon-${num}`;
+    if (node.type === 'FRAME') return `Surface/Frame-${num}`;
+    if (node.type === 'COMPONENT' || node.type === 'INSTANCE') {
+      return `${componentPrefixFromLayerName(node.name)}/Unnamed-${num}`;
+    }
+    return `Surface/Layer-${num}`;
+  }
+  if (issue === 'Nama tidak sesuai konvensi penamaan') {
+    const slug = namingSlug(node.name);
+    if (isScreen) return `Screen/${slug}`;
+    if (node.type === 'TEXT') return `Text/${textRoleFromNode(node)}`;
+    if (node.type === 'COMPONENT' || node.type === 'INSTANCE') {
+      return `${componentPrefixFromLayerName(node.name)}/${slug}`;
+    }
+    if (/icon/i.test(node.name)) return `Icon/${slug}`;
+    return `Surface/${slug}`;
+  }
+  return null;
+}
+
+function evaluateNaming(node, rules, isScreen) {
+  if (!NAMING_NODE_TYPES.includes(node.type)) return { ok: true };
+  if (node.visible === false) return { ok: true };
+  const p = rules.namingPatterns;
+  let ok = true;
+  let issue = '';
+  let pattern = null;
   if (DEFAULT_NAME.test(node.name)) {
     ok = false;
     issue = 'Nama layer bawaan Figma';
@@ -906,8 +986,34 @@ function checkNaming(node, ctx, base, isScreen) {
     ok = false;
     issue = 'Nama tidak sesuai konvensi penamaan';
   }
-  count(ctx, 'NAMING', ok);
-  if (!ok) addViolation(ctx, base, 'NAMING', 'MEDIUM', issue);
+  if (ok) return { ok: true };
+  const suggestedName = proposeLayerName(node, rules, isScreen, issue);
+  const extra = { issue };
+  if (
+    suggestedName
+    && suggestedName !== node.name
+    && namePassesNamingRules(suggestedName, node, rules, isScreen)
+  ) {
+    extra.suggestedName = suggestedName;
+    extra.suggestion = `Ganti nama → ${suggestedName}`;
+    extra.matchType = 'EXACT';
+  }
+  return { ok: false, ...extra };
+}
+
+function checkNaming(node, ctx, base, isScreen) {
+  const r = evaluateNaming(node, ctx.rules, isScreen);
+  count(ctx, 'NAMING', r.ok);
+  if (!r.ok) {
+    const sev = r.issue === 'Nama layer bawaan Figma' ? 'LOW' : 'MEDIUM';
+    const extra = {};
+    if (r.suggestedName) {
+      extra.suggestedName = r.suggestedName;
+      extra.suggestion = r.suggestion;
+      extra.matchType = r.matchType;
+    }
+    addViolation(ctx, base, 'NAMING', sev, r.issue, extra);
+  }
 }
 
 function checkDetached(node, ctx, base) {
@@ -1558,6 +1664,10 @@ async function applyChanges(items) {
         changes.push({ nodeId: node.id, kind: 'textStyle', prev: node.textStyleId });
         await node.setTextStyleIdAsync(style.id);
         applied++;
+      } else if (it.category === 'NAMING' && it.suggestedName) {
+        changes.push({ nodeId: node.id, kind: 'name', prev: node.name });
+        node.name = it.suggestedName;
+        applied++;
       } else {
         skipped++;
       }
@@ -1589,6 +1699,8 @@ async function undoChanges(log) {
       } else if (c.kind === 'textStyle') {
         if (node.fontName !== figma.mixed) await figma.loadFontAsync(node.fontName);
         await node.setTextStyleIdAsync(c.prev || '');
+      } else if (c.kind === 'name') {
+        node.name = c.prev;
       }
       restored++;
     } catch (e) { /* lewati node yang gagal */ }
@@ -1777,6 +1889,50 @@ async function walkDetach(node, tally) {
   if ('children' in node && node.type !== 'INSTANCE') {
     for (const child of node.children) await walkDetach(child, tally);
   }
+}
+
+function isScreenFrame(node) {
+  return !!(node && node.type === 'FRAME' && node.parent && node.parent.type === 'PAGE');
+}
+
+async function walkRenameLayers(node, rules, tally, changes) {
+  const isScreen = isScreenFrame(node);
+  const r = evaluateNaming(node, rules, isScreen);
+  if (!r.ok && r.suggestedName) {
+    changes.push({ nodeId: node.id, kind: 'name', prev: node.name });
+    node.name = r.suggestedName;
+    tally.renamed++;
+  }
+  if ('children' in node) {
+    for (const child of node.children) await walkRenameLayers(child, rules, tally, changes);
+  }
+}
+
+async function renameLayers(scope) {
+  let roots = [];
+  if (scope === 'selection') {
+    roots = figma.currentPage.selection.slice();
+    if (roots.length === 0) {
+      figma.ui.postMessage({ type: 'notice', text: 'Pilih layer untuk perbaiki penamaan.' });
+      return;
+    }
+  } else if (scope === 'page') {
+    await loadPageIfNeeded(figma.currentPage);
+    roots = figma.currentPage.children.slice();
+  } else {
+    figma.ui.postMessage({ type: 'notice', text: 'Cakupan tidak dikenali.' });
+    return;
+  }
+  const tally = { renamed: 0 };
+  const changes = [];
+  for (const root of roots) await walkRenameLayers(root, AUDIT_RULES, tally, changes);
+  figma.ui.postMessage({
+    type: 'rename-result',
+    renamed: tally.renamed,
+    undo: changes.length
+      ? { schemaVersion: '1.0', createdAt: new Date().toISOString(), changes }
+      : null
+  });
 }
 
 async function detachVariables(scope) {
@@ -1995,6 +2151,7 @@ figma.ui.onmessage = async (msg) => {
       }
     }
     else if (msg.type === 'detach-variables') await detachVariables(msg.scope || 'selection');
+    else if (msg.type === 'rename-layers') await renameLayers(msg.scope || 'selection');
     else if (msg.type === 'remap-variable') await remapVariable(msg.scope || 'selection', msg.fromKey, msg.toKey);
     else if (msg.type === 'load-variable-catalog') await loadVariableCatalog();
     else if (msg.type === 'close') figma.closePlugin();

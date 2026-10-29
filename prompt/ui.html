@@ -849,6 +849,20 @@
           <button type="button" class="btn btn-primary btn-lg" id="remapBtn" style="width:100%">Ganti pada layer terpilih</button>
         </div>
       </div>
+      <div class="card">
+        <div class="tool-head">
+          <div class="field-label">Perbaiki penamaan</div>
+          <button type="button" class="btn btn-secondary tool-toggle" data-target="toolRename" aria-expanded="false">Tampilkan</button>
+        </div>
+        <div class="tool-body" id="toolRename" hidden>
+          <p class="hint">Ubah nama bawaan Figma dan nama yang tidak cocok pola di rules (Screen/, Text/, Surface/, …). Tanpa AI.</p>
+          <div class="segmented" id="renameScope">
+            <button type="button" data-scope="selection" data-active="true">Seleksi</button>
+            <button type="button" data-scope="page" data-active="false">Halaman</button>
+          </div>
+          <button type="button" class="btn btn-primary btn-lg" id="renameBtn" style="width:100%">Perbaiki penamaan</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -869,6 +883,7 @@
   let auditBusy = false;
   let lastUndoLog = null;
   let detachScope = 'selection';
+  let renameScope = 'selection';
   let variableCatalog = [];
 
   const UI_REF_W = 420;
@@ -1046,6 +1061,19 @@
     if (!confirm('Lepas variabel pada bagian ini?')) return;
     post({ type: 'detach-variables', scope: detachScope });
   };
+  $('renameScope').querySelectorAll('button').forEach((btn) => {
+    btn.onclick = () => {
+      renameScope = btn.dataset.scope;
+      $('renameScope').querySelectorAll('button').forEach((b) => {
+        b.dataset.active = b === btn ? 'true' : 'false';
+      });
+    };
+  });
+  $('renameBtn').onclick = () => {
+    const where = renameScope === 'page' ? 'seluruh halaman ini' : 'seleksi';
+    if (!confirm(`Perbaiki penamaan layer pada ${where}?`)) return;
+    post({ type: 'rename-layers', scope: renameScope });
+  };
   $('remapBtn').onclick = () => {
     const fromKey = $('remapFrom').value;
     const toKey = $('remapTo').value;
@@ -1199,7 +1227,7 @@
   function groupViolations(list) {
     const map = new Map();
     for (const v of list) {
-      const key = [v.category, v.severity, v.matchType, v.issue, v.currentValue || '', v.suggestion || ''].join('|');
+      const key = [v.category, v.severity, v.matchType, v.issue, v.currentValue || '', v.suggestion || '', v.suggestedName || ''].join('|');
       if (!map.has(key)) map.set(key, { ...v, ids: [v.id], count: 1, indices: [v._index] });
       else {
         const g = map.get(key);
@@ -1252,6 +1280,7 @@
   }
   function canAutoApply(v) {
     if (!v) return false;
+    if (v.category === 'NAMING' && v.suggestedName && v.suggestedName !== v.layerName) return true;
     if (v.matchType === 'EXACT') {
       return !!(v.targetVariableKey || v.targetVariableId || v.targetStyleKey || v.targetStyleId);
     }
@@ -1358,6 +1387,9 @@
   }
 
   function applyActionLine(v) {
+    if (v.category === 'NAMING' && v.suggestedName) {
+      return `Akan dinamai: ${v.suggestedName}`;
+    }
     const name = v.targetVariableName || nearestTokenFromSuggestion(v) || tokenNameFrom(v);
     const autoNear = v.matchType === 'NEAR' && (
       v.category === 'COLOR' || v.category === 'SPACING'
@@ -1388,7 +1420,8 @@
       return `Pilih layer, buka Variables, lalu pasang ${tok}.`;
     }
     if (v.category === 'AUTO_LAYOUT') return 'Nyalakan Auto Layout di panel kanan.';
-    if (v.category === 'NAMING') return 'Ubah nama layer.';
+    if (v.category === 'NAMING' && v.suggestedName) return `Ketuk ikon perbaiki → ${v.suggestedName}`;
+    if (v.category === 'NAMING') return 'Ubah nama layer manual di panel kanan.';
     if (v.category === 'COMPONENT') return 'Ganti dengan komponen SawitPRO.';
     if (v.suggestion) return humanizeCopy(v.suggestion);
     return humanizeCopy(v.issue);
@@ -1588,6 +1621,10 @@
       lastUndoLog = m.undo && (m.undo.changes || []).length ? m.undo : null;
       setUndoAvailable(!!lastUndoLog);
       notice(`Berhasil ${m.applied}, tidak jadi ${m.skipped}.`);
+    } else if (m.type === 'rename-result') {
+      lastUndoLog = m.undo && (m.undo.changes || []).length ? m.undo : null;
+      setUndoAvailable(!!lastUndoLog);
+      notice(m.renamed > 0 ? `${m.renamed} layer dinamai ulang.` : 'Tidak ada layer yang perlu diperbaiki.');
     } else if (m.type === 'variable-catalog') fillCatalogSelects(m.catalog);
     else if (m.type === 'audit-abort') {
       auditBusy = false;

@@ -2,6 +2,17 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## 1.3.3
+
+### Added
+
+- **Rename layer:** saran nama deterministik (tanpa AI) pada temuan **Penamaan**; bisa **Perbaiki otomatis** + undo.
+- Tab **Alat → Perbaiki penamaan** untuk seleksi atau seluruh halaman (aturan sama dengan audit).
+
+### Changed
+
+- Layer tersembunyi dilewati saat cek penamaan; nama bawaan Figma severity **LOW** (selaras spec).
+
 ## 1.3.2
 
 ### Fixed

@@ -3,7 +3,7 @@
 Plugin Figma untuk mengaudit kepatuhan Design System di file desain SawitPRO (PetaniPRO, RamPRO, TimPRO, Toko Sawit, sprint species master, dan portofolio aplikasi lain). Audit deterministik di dalam plugin: tanpa LLM, tanpa export JSON dari UI, tanpa REST API, tanpa menyimpan token di repository.
 
 **Repo:** [github.com/sapikkk/design-audit-sawitpro](https://github.com/sapikkk/design-audit-sawitpro)  
-**Versi plugin:** 1.3.2 (runtime `PLUGIN_VERSION` di `prompt/code.js`) — riwayat lengkap [`CHANGELOG.md`](CHANGELOG.md).
+**Versi plugin:** 1.3.3 (runtime `PLUGIN_VERSION` di `prompt/code.js`) — riwayat lengkap [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
