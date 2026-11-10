@@ -29,8 +29,13 @@ Repositori **plugin Figma** audit Design System SawitPRO (bukan app Kokonus). Ko
 | [`docs/agent/figma-mcp-design-system-rules.md`](docs/agent/figma-mcp-design-system-rules.md) | DS 3.0 + MCP |
 | [`docs/agent/figma-plugin-icon-publish.md`](docs/agent/figma-plugin-icon-publish.md) | Ikon publish org |
 | [`docs/agent/publish-v1.md`](docs/agent/publish-v1.md) | Checklist publish **v1.0** |
+| [`docs/requirements/`](docs/requirements/) | Kebutuhan plugin pelengkap (handoff Spectral, dll.) |
 
 ## Batasan teknis
 
 - Tanpa LLM, tanpa network di plugin, tanpa export JSON dari UI.
 - `AUDIT_RULES` di `code.js` harus selaras dengan `prompt/rules.json`.
+
+## EGM (Elephant–Goldfish)
+
+EGM artifact directory: `docs/egm-workspace` (brief, review notes). Spesifikasi disetujui: `docs/designs/`. Plugin EGM lokal: `~/.cursor/plugins/local/elephant-goldfish-model`.

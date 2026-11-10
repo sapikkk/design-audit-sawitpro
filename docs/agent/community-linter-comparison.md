@@ -42,6 +42,16 @@ flowchart LR
 2. **Tokens Studio sync** — library Figma native.
 3. **Export audit JSON** — agregat offline via repo.
 
+## Handoff ukuran (pelengkap, bukan parity audit)
+
+| Fitur | DesignDoc [Spectral] | **SawitPRO** |
+| :--- | :---: | :---: |
+| Redline spacing/padding di kanvas | ✅ | ❌ |
+| Create Spec nested auto-layout | ✅ | ❌ |
+| Audit variabel / skor DS | ❌ | ✅ |
+
+Spesifikasi kebutuhan tim: [`../requirements/designdoc-spectral-handoff.md`](../requirements/designdoc-spectral-handoff.md) (REQ-HDO-001). Pasang dari [Figma Community](https://www.figma.com/community/plugin/1177722582033208360/designdoc-spectral-measures-annotations-and-handoff); tidak ada repo GitHub.
+
 ## Cara pakai (lengkap)
 
 1. **Audit** — cakupan → jalankan → filter / grup → navigasi layer.

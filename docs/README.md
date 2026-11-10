@@ -10,6 +10,7 @@
 | DS 3.0 + MCP | [`agent/figma-mcp-design-system-rules.md`](agent/figma-mcp-design-system-rules.md) |
 | Ikon publish | [`agent/figma-plugin-icon-publish.md`](agent/figma-plugin-icon-publish.md) |
 | Changelog | [`../CHANGELOG.md`](../CHANGELOG.md) |
+| Kebutuhan plugin & handoff | [`requirements/`](requirements/) |
 
 ---
 
@@ -36,6 +37,7 @@ Pusat baca untuk tim produk, developer, QA, dan penelitian. Semua Markdown proye
 | [`deployment/`](deployment/) | DevOps | Vercel, Postgres, go-live |
 | [`audit/`](audit/) | Review teknis | RBAC, perf, keamanan, UI responsif |
 | [`agent/`](agent/) | Cursor / AI | Stack agent, vendor, Superpowers, **Figma MCP + DS SawitPRO** |
+| [`requirements/`](requirements/) | Design Ops, PO | Kebutuhan plugin pelengkap (mis. handoff Spectral) |
 | [`referensi/`](referensi/) | Integrasi | Kontrak API |
 | [`skills/`](skills/) | Agent domain | Kokonus, akuntansi, Semgrep, … |
 | [`arsip/`](arsip/) | Riwayat | Notulensi rapat, catatan progres teknis lama |

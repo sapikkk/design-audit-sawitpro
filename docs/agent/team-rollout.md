@@ -42,6 +42,7 @@ Kirim ke tim (Slack/Notion):
 2. Pasang **DESIGN AUDIT SAWITPRO**.
 3. Di setiap file sprint: **Libraries** → enable DS tim.
 4. **Audit** sebelum handoff; perbaiki **EXACT** dari tab Apply; jangan detach/remap di file produksi tanpa koordinasi DS.
+5. **Handoff ukuran ke dev** (opsional): plugin Community **DesignDoc [Spectral]** — lihat [`../requirements/designdoc-spectral-handoff.md`](../requirements/designdoc-spectral-handoff.md).
 
 ---
 
