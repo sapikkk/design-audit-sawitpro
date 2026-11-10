@@ -19,9 +19,10 @@ cp "$ROOT/icon.png" "$OUT/icon.png"
 cp "$ROOT/prompt/icon.png" "$OUT/icon.png"
 cp "$ROOT/prompt/brand-icon.png" "$OUT/brand-icon.png"
 
-cat > "$OUT/manifest.json" << 'JSON'
+PLUGIN_NAME="$(node -e "console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).name)" "$ROOT/manifest.json")"
+cat > "$OUT/manifest.json" << JSON
 {
-  "name": "DESIGN AUDIT SAWITPRO",
+  "name": $(node -e "console.log(JSON.stringify(process.argv[1]))" "$PLUGIN_NAME"),
   "id": "1696532958279147641",
   "api": "1.0.0",
   "main": "code.js",

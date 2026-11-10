@@ -1,6 +1,5 @@
-// DS Audit Pro — code.js (v1.3.5)
+// DS Audit Pro — code.js (v1.3.6)
 // Berjalan di sandbox Figma. Tidak ada LLM, tidak ada network, tidak ada token di config.
-console.log('[DESIGN AUDIT SAWITPRO] plugin v1.3.5 loaded');
 // Semua token dan komponen ditemukan dari file aktif dan library yang di-enable.
 // Mode: audit, apply, undo (in-memory), annotate, clear-annotations, select.
 
@@ -90,8 +89,10 @@ const FILE_CATEGORY_LABEL = {
   OTHER: 'Lainnya'
 };
 
-const PLUGIN_VERSION = '1.3.5';
-const PLUGIN_VERSION_LABEL = '1.2';
+const PLUGIN_VERSION = '1.3.6';
+const PLUGIN_DISPLAY_NAME = 'AI TRANSFORMATION : design audit by Prod Des';
+const PLUGIN_VERSION_LABEL = PLUGIN_VERSION;
+console.log('[' + PLUGIN_DISPLAY_NAME + '] v' + PLUGIN_VERSION + ' loaded');
 
 const UI_DEFAULT_W = 320;
 const UI_DEFAULT_H = 480;
@@ -751,7 +752,7 @@ let uiSizeRestoreDone = false;
 function openPluginUi(width, height) {
   figma.showUI(__html__, { width, height, themeColors: true });
   uiSizeRestoreDone = true;
-  figma.notify('Audit SawitPRO v' + PLUGIN_VERSION_LABEL + ' siap dipakai', { timeout: 2800 });
+  figma.notify(PLUGIN_DISPLAY_NAME, { timeout: 3200 });
   bootUi();
 }
 

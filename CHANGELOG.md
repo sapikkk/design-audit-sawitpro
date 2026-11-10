@@ -2,6 +2,13 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## 1.3.6
+
+### Changed
+
+- Nama tampil plugin: **AI TRANSFORMATION : design audit by Prod Des** (manifest Figma, toast buka, header & splash UI).
+- Hapus toast «Audit SawitPRO v1.2 siap dipakai»; label versi UI ikut `PLUGIN_VERSION`.
+
 ## 1.3.5
 
 ### Changed
