@@ -614,8 +614,8 @@
   .action-bar {
     flex-shrink: 0;
     display: flex;
-    gap: 8px;
-    padding: 12px 16px;
+    gap: 6px;
+    padding: 8px 12px;
     background: var(--card);
     border-top: 1px solid var(--border);
   }
@@ -851,16 +851,16 @@
       </div>
       <div class="card">
         <div class="tool-head">
-          <div class="field-label">Perbaiki penamaan</div>
+          <div class="field-label">Rename layers</div>
           <button type="button" class="btn btn-secondary tool-toggle" data-target="toolRename" aria-expanded="false">Tampilkan</button>
         </div>
         <div class="tool-body" id="toolRename" hidden>
-          <p class="hint">Ubah nama bawaan Figma dan nama yang tidak cocok pola di rules (Screen/, Text/, Surface/, …). Tanpa AI.</p>
+          <p class="hint">English layer names (Screen/, Text/, Button/…). INSTANCE uses main component. No AI.</p>
           <div class="segmented" id="renameScope">
-            <button type="button" data-scope="selection" data-active="true">Seleksi</button>
-            <button type="button" data-scope="page" data-active="false">Halaman</button>
+            <button type="button" data-scope="selection" data-active="true">Selection</button>
+            <button type="button" data-scope="page" data-active="false">Page</button>
           </div>
-          <button type="button" class="btn btn-primary btn-lg" id="renameBtn" style="width:100%">Perbaiki penamaan</button>
+          <button type="button" class="btn btn-primary btn-lg" id="renameBtn" style="width:100%">Rename layers</button>
         </div>
       </div>
     </div>
@@ -886,10 +886,10 @@
   let renameScope = 'selection';
   let variableCatalog = [];
 
-  const UI_REF_W = 420;
-  const UI_REF_H = 760;
+  const UI_REF_W = 360;
+  const UI_REF_H = 540;
   const UI_MIN_W = 280;
-  const UI_MIN_H = 400;
+  const UI_MIN_H = 360;
   const UI_MAX_W = 900;
   const UI_MAX_H = 1400;
   const STATUS_LABEL = {
@@ -904,7 +904,7 @@
     COLOR: 'Warna',
     SPACING: 'Spacing & radius',
     COMPONENT: 'Komponen',
-    NAMING: 'Penamaan',
+    NAMING: 'Naming',
     VARIABLE: 'Variabel'
   };
   const FIELD_LABEL = {
@@ -953,6 +953,9 @@
       .replace(/^Detach selesai:/, 'Lepas variabel selesai:')
       .replace(/\bbind\b/gi, 'kaitan')
       .replace(/^Remap /, 'Ganti variabel: ')
+      .replace(/(\d+) layer renamed\./, '$1 layer dinamai ulang.')
+      .replace(/No layers needed renaming\./, 'Tidak ada layer yang perlu diperbaiki.')
+      .replace(/Select layers to rename\./, 'Pilih layer untuk rename.')
       .replace(/ bind diperbarui/, ' kaitan diperbarui')
       .replace(/Pilih layer untuk remap/i, 'Pilih layer untuk ganti variabel');
   }
@@ -1070,8 +1073,8 @@
     };
   });
   $('renameBtn').onclick = () => {
-    const where = renameScope === 'page' ? 'seluruh halaman ini' : 'seleksi';
-    if (!confirm(`Perbaiki penamaan layer pada ${where}?`)) return;
+    const where = renameScope === 'page' ? 'this page' : 'selection';
+    if (!confirm(`Rename layers on ${where}?`)) return;
     post({ type: 'rename-layers', scope: renameScope });
   };
   $('remapBtn').onclick = () => {
@@ -1388,7 +1391,7 @@
 
   function applyActionLine(v) {
     if (v.category === 'NAMING' && v.suggestedName) {
-      return `Akan dinamai: ${v.suggestedName}`;
+      return `Rename to: ${v.suggestedName}`;
     }
     const name = v.targetVariableName || nearestTokenFromSuggestion(v) || tokenNameFrom(v);
     const autoNear = v.matchType === 'NEAR' && (
@@ -1420,8 +1423,8 @@
       return `Pilih layer, buka Variables, lalu pasang ${tok}.`;
     }
     if (v.category === 'AUTO_LAYOUT') return 'Nyalakan Auto Layout di panel kanan.';
-    if (v.category === 'NAMING' && v.suggestedName) return `Ketuk ikon perbaiki → ${v.suggestedName}`;
-    if (v.category === 'NAMING') return 'Ubah nama layer manual di panel kanan.';
+    if (v.category === 'NAMING' && v.suggestedName) return `Tap fix → ${v.suggestedName}`;
+    if (v.category === 'NAMING') return 'Rename manually in the right panel.';
     if (v.category === 'COMPONENT') return 'Ganti dengan komponen SawitPRO.';
     if (v.suggestion) return humanizeCopy(v.suggestion);
     return humanizeCopy(v.issue);
@@ -1624,7 +1627,7 @@
     } else if (m.type === 'rename-result') {
       lastUndoLog = m.undo && (m.undo.changes || []).length ? m.undo : null;
       setUndoAvailable(!!lastUndoLog);
-      notice(m.renamed > 0 ? `${m.renamed} layer dinamai ulang.` : 'Tidak ada layer yang perlu diperbaiki.');
+      notice(m.renamed > 0 ? `${m.renamed} layer renamed.` : 'No layers needed renaming.');
     } else if (m.type === 'variable-catalog') fillCatalogSelects(m.catalog);
     else if (m.type === 'audit-abort') {
       auditBusy = false;
@@ -1711,7 +1714,7 @@
 
     grip.ondblclick = (e) => {
       e.preventDefault();
-      post({ type: 'resize-ui', width: 420, height: 760 });
+      post({ type: 'resize-ui', width: 360, height: 540 });
     };
   }
 

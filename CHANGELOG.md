@@ -2,6 +2,13 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## 1.3.4
+
+### Changed
+
+- Default ukuran plugin **360×540** (storage key baru; double-click sudut = reset).
+- Temuan **Naming**: teks & saran layer dalam bahasa Inggris; INSTANCE memakai **main component** untuk usulan nama.
+
 ## 1.3.3
 
 ### Added

@@ -1,6 +1,6 @@
-// DS Audit Pro — code.js (v1.3.3)
+// DS Audit Pro — code.js (v1.3.4)
 // Berjalan di sandbox Figma. Tidak ada LLM, tidak ada network, tidak ada token di config.
-console.log('[DESIGN AUDIT SAWITPRO] plugin v1.3.3 loaded');
+console.log('[DESIGN AUDIT SAWITPRO] plugin v1.3.4 loaded');
 // Semua token dan komponen ditemukan dari file aktif dan library yang di-enable.
 // Mode: audit, apply, undo (in-memory), annotate, clear-annotations, select.
 
@@ -90,16 +90,16 @@ const FILE_CATEGORY_LABEL = {
   OTHER: 'Lainnya'
 };
 
-const PLUGIN_VERSION = '1.3.3';
+const PLUGIN_VERSION = '1.3.4';
 const PLUGIN_VERSION_LABEL = '1.2';
 
-const UI_DEFAULT_W = 420;
-const UI_DEFAULT_H = 760;
+const UI_DEFAULT_W = 360;
+const UI_DEFAULT_H = 540;
 const UI_MIN_W = 280;
-const UI_MIN_H = 400;
+const UI_MIN_H = 360;
 const UI_MAX_W = 900;
 const UI_MAX_H = 1400;
-const UI_SIZE_STORAGE_KEY = 'auditPluginUiSize';
+const UI_SIZE_STORAGE_KEY = 'auditPluginUiSize.v2';
 
 function clampUiSize(w, h) {
   return {
@@ -896,6 +896,8 @@ function addViolation(ctx, base, category, severity, issue, extra) {
 // ---------- Pengecekan per node ----------
 
 const NAMING_NODE_TYPES = ['FRAME', 'COMPONENT', 'INSTANCE', 'TEXT', 'GROUP'];
+const NAMING_ISSUE_DEFAULT = 'Default Figma layer name';
+const NAMING_ISSUE_PATTERN = 'Name does not match naming pattern';
 
 function namingSlug(raw) {
   let slug = String(raw || '')
@@ -942,10 +944,60 @@ function namePassesNamingRules(name, node, rules, isScreen) {
   return true;
 }
 
+function instanceNameFromMain(main, rules, node, isScreen) {
+  if (!main) return null;
+  const setName = componentSetName(main);
+  const prefix = componentPrefixFromLayerName(setName || main.name);
+  const variantSlug = main.parent && main.parent.type === 'COMPONENT_SET' && main.name !== setName
+    ? namingSlug(main.name)
+    : namingSlug(setName && setName !== main.name ? `${setName}-${main.name}` : main.name);
+  const candidate = `${prefix}/${variantSlug || 'Layer'}`;
+  if (
+    candidate !== node.name
+    && namePassesNamingRules(candidate, node, rules, isScreen)
+  ) {
+    return candidate;
+  }
+  const fallback = `${prefix}/Unnamed-${namingTrailingNum(node.name)}`;
+  if (fallback !== node.name && namePassesNamingRules(fallback, node, rules, isScreen)) {
+    return fallback;
+  }
+  return null;
+}
+
+async function namingSuggestionFromMain(node, rules, isScreen, issue) {
+  if (!issue) return null;
+  if (node.type === 'COMPONENT') {
+    return instanceNameFromMain(node, rules, node, isScreen);
+  }
+  if (node.type !== 'INSTANCE') return null;
+  try {
+    const main = await node.getMainComponentAsync();
+    return instanceNameFromMain(main, rules, node, isScreen);
+  } catch (e) {
+    return null;
+  }
+}
+
+async function evaluateNamingAsync(node, rules, isScreen) {
+  const r = evaluateNaming(node, rules, isScreen);
+  if (r.ok) return r;
+  const fromMain = await namingSuggestionFromMain(node, rules, isScreen, r.issue);
+  if (fromMain) {
+    return {
+      ...r,
+      suggestedName: fromMain,
+      suggestion: `Rename to → ${fromMain}`,
+      matchType: 'EXACT'
+    };
+  }
+  return r;
+}
+
 function proposeLayerName(node, rules, isScreen, issue) {
   if (!issue) return null;
   const num = namingTrailingNum(node.name);
-  if (issue === 'Nama layer bawaan Figma') {
+  if (issue === NAMING_ISSUE_DEFAULT) {
     if (isScreen && node.type === 'FRAME') return `Screen/Screen-${num}`;
     if (node.type === 'TEXT') return `Text/${textRoleFromNode(node)}`;
     if (node.type === 'GROUP') return `Surface/Group-${num}`;
@@ -956,7 +1008,7 @@ function proposeLayerName(node, rules, isScreen, issue) {
     }
     return `Surface/Layer-${num}`;
   }
-  if (issue === 'Nama tidak sesuai konvensi penamaan') {
+  if (issue === NAMING_ISSUE_PATTERN) {
     const slug = namingSlug(node.name);
     if (isScreen) return `Screen/${slug}`;
     if (node.type === 'TEXT') return `Text/${textRoleFromNode(node)}`;
@@ -978,13 +1030,13 @@ function evaluateNaming(node, rules, isScreen) {
   let pattern = null;
   if (DEFAULT_NAME.test(node.name)) {
     ok = false;
-    issue = 'Nama layer bawaan Figma';
+    issue = NAMING_ISSUE_DEFAULT;
   } else if (isScreen) pattern = p.screen;
   else if (node.type === 'COMPONENT' || node.type === 'INSTANCE') pattern = p.component;
   else if (node.type === 'TEXT') pattern = p.text;
   if (ok && pattern && !new RegExp(pattern).test(node.name)) {
     ok = false;
-    issue = 'Nama tidak sesuai konvensi penamaan';
+    issue = NAMING_ISSUE_PATTERN;
   }
   if (ok) return { ok: true };
   const suggestedName = proposeLayerName(node, rules, isScreen, issue);
@@ -995,17 +1047,17 @@ function evaluateNaming(node, rules, isScreen) {
     && namePassesNamingRules(suggestedName, node, rules, isScreen)
   ) {
     extra.suggestedName = suggestedName;
-    extra.suggestion = `Ganti nama → ${suggestedName}`;
+    extra.suggestion = `Rename to → ${suggestedName}`;
     extra.matchType = 'EXACT';
   }
   return { ok: false, ...extra };
 }
 
-function checkNaming(node, ctx, base, isScreen) {
-  const r = evaluateNaming(node, ctx.rules, isScreen);
+async function checkNaming(node, ctx, base, isScreen) {
+  const r = await evaluateNamingAsync(node, ctx.rules, isScreen);
   count(ctx, 'NAMING', r.ok);
   if (!r.ok) {
-    const sev = r.issue === 'Nama layer bawaan Figma' ? 'LOW' : 'MEDIUM';
+    const sev = r.issue === NAMING_ISSUE_DEFAULT ? 'LOW' : 'MEDIUM';
     const extra = {};
     if (r.suggestedName) {
       extra.suggestedName = r.suggestedName;
@@ -1350,7 +1402,7 @@ async function checkNode(node, ctx, screen, isScreen) {
     layerName: node.name,
     nodeType: node.type
   };
-  checkNaming(node, ctx, base, isScreen);
+  await checkNaming(node, ctx, base, isScreen);
   if (node.type === 'FRAME' || node.type === 'GROUP') checkDetached(node, ctx, base);
   if (node.type === 'INSTANCE') await checkInstance(node, ctx, base);
   checkAutoLayout(node, ctx, base, isScreen);
@@ -1897,7 +1949,7 @@ function isScreenFrame(node) {
 
 async function walkRenameLayers(node, rules, tally, changes) {
   const isScreen = isScreenFrame(node);
-  const r = evaluateNaming(node, rules, isScreen);
+  const r = await evaluateNamingAsync(node, rules, isScreen);
   if (!r.ok && r.suggestedName) {
     changes.push({ nodeId: node.id, kind: 'name', prev: node.name });
     node.name = r.suggestedName;
@@ -1913,14 +1965,14 @@ async function renameLayers(scope) {
   if (scope === 'selection') {
     roots = figma.currentPage.selection.slice();
     if (roots.length === 0) {
-      figma.ui.postMessage({ type: 'notice', text: 'Pilih layer untuk perbaiki penamaan.' });
+      figma.ui.postMessage({ type: 'notice', text: 'Select layers to rename.' });
       return;
     }
   } else if (scope === 'page') {
     await loadPageIfNeeded(figma.currentPage);
     roots = figma.currentPage.children.slice();
   } else {
-    figma.ui.postMessage({ type: 'notice', text: 'Cakupan tidak dikenali.' });
+    figma.ui.postMessage({ type: 'notice', text: 'Unknown rename scope.' });
     return;
   }
   const tally = { renamed: 0 };
