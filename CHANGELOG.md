@@ -2,6 +2,13 @@
 
 Format berdasarkan [Keep a Changelog](https://keepachangelog.com/). Versi mengikuti perkembangan plugin di `prompt/`.
 
+## 1.3.5
+
+### Changed
+
+- UI padat: token `--ui-density`, font/card/button kecil di semua halaman; `syncUiScale` tidak membesarkan teks saat jendela dibesarkan.
+- Default ukuran plugin **320×480** (`auditPluginUiSize.v3`; double-click sudut = reset).
+
 ## 1.3.4
 
 ### Changed
